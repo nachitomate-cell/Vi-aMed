@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ViñaMed">
+<meta name="description" content="Portal Clínico ViñaMed – Imagenología y Rehabilitación">
+<link rel="manifest" href="manifest.json">
+<title>ViñaMed – Portal Clínico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════ TOKENS ═══════════ */
+:root{
+  --g0:#3dffa0; --g1:#00d4aa; --c0:#00b4d8; --c1:#0090c0;
+  --dark:#080d18; --panel:#0f1623; --card:#141d2e; --card2:#192235;
+  --border:rgba(0,180,216,.13); --border2:rgba(61,255,160,.12);
+  --text:#dde6f0; --muted:#5a6a88;
+  --sidebar-w:252px; --header-h:60px;
+  --r:13px; --ease:cubic-bezier(.4,0,.2,1); --t:.22s var(--ease);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden}
+::selection{background:rgba(61,255,160,.25)}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:9px}
+
+/* ═══════════ HEADER ═══════════ */
+header{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--header-h);background:rgba(8,13,24,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;gap:.85rem}
+.hamburger{display:flex;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;padding:6px;background:none;border:none;cursor:pointer;flex-shrink:0}
+.hamburger span{display:block;height:2px;width:100%;background:var(--c0);border-radius:2px;transition:var(--t)}
+.sidebar-open .hamburger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.sidebar-open .hamburger span:nth-child(2){opacity:0;transform:scaleX(0)}
+.sidebar-open .hamburger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.logo-wrap{display:flex;align-items:center;gap:.6rem;text-decoration:none;flex-shrink:0}
+.logo-img{height:34px;width:34px;border-radius:8px;object-fit:contain;background:#000;flex-shrink:0}
+.logo-text .brand{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;display:block;background:linear-gradient(90deg,var(--g0),var(--c0));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
+.logo-text .sub{font-size:.6rem;color:var(--muted);letter-spacing:.07em;-webkit-text-fill-color:var(--muted)}
+header .spacer{flex:1}
+.clock{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:600;color:var(--c0);letter-spacing:.04em;background:rgba(0,180,216,.07);border:1px solid var(--border);padding:.28rem .75rem;border-radius:8px;white-space:nowrap}
+@media(max-width:480px){.clock{display:none}}
+.btn-icon{width:36px;height:36px;border-radius:9px;background:var(--card);border:1px solid var(--border);color:var(--c0);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--t);flex-shrink:0}
+.btn-icon:hover{background:rgba(0,180,216,.1);border-color:var(--c0);transform:scale(1.05)}
+.btn-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn-icon-wrap{position:relative}
+
+/* ═══════════ SIDEBAR ═══════════ */
+.sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;z-index:90;width:var(--sidebar-w);background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;transform:translateX(-100%);transition:transform var(--t);padding:1rem .65rem 2rem;display:flex;flex-direction:column;gap:.18rem}
+.sidebar.open{transform:translateX(0)}
+@media(min-width:960px){.sidebar{transform:translateX(0)}.hamburger{display:none}main{margin-left:var(--sidebar-w)}}
+.overlay{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+.sidebar-open .overlay{display:block}
+@media(min-width:960px){.overlay{display:none!important}}
+.nav-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);padding:.6rem .75rem .2rem;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .85rem;border-radius:9px;color:var(--muted);cursor:pointer;transition:var(--t);border:1px solid transparent;font-size:.875rem;font-weight:500;user-select:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.035)}
+.nav-item.active{color:var(--g0);background:rgba(61,255,160,.07);border-color:rgba(61,255,160,.14)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item .nav-badge{margin-left:auto;font-size:.62rem;font-weight:700;background:rgba(61,255,160,.15);color:var(--g0);border:1px solid rgba(61,255,160,.25);padding:.1rem .45rem;border-radius:99px}
+.nav-item .nav-badge.cyan{background:rgba(0,180,216,.12);color:var(--c0);border-color:rgba(0,180,216,.2)}
+.nav-divider{height:1px;background:var(--border);margin:.5rem .75rem}
+.nav-parent .chevron{margin-left:auto;width:13px;height:13px;transition:transform var(--t)}
+.nav-parent.open .chevron{transform:rotate(90deg)}
+.submenu{overflow:hidden;max-height:0;transition:max-height .3s var(--ease)}
+.nav-parent.open .submenu{max-height:300px}
+.submenu .nav-item{padding-left:2.4rem;font-size:.83rem}
+.sidebar-footer{margin-top:auto;padding:.75rem .85rem;border:1px solid var(--border);border-radius:10px;background:var(--card);margin-top:1rem}
+.sf-name{font-size:.83rem;font-weight:600;color:var(--text)}
+.sf-role{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+.sf-sis{display:inline-block;margin-top:.45rem;font-size:.67rem;background:rgba(61,255,160,.08);color:var(--g0);border:1px solid rgba(61,255,160,.18);padding:.15rem .55rem;border-radius:99px}
+
+/* ═══════════ MAIN ═══════════ */
+main{padding-top:var(--header-h);min-height:100vh;transition:margin-left var(--t)}
+.page{display:none;padding:1.5rem 1.25rem;animation:fadeUp .3s ease both}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══════════ DASHBOARD ═══════════ */
+.welcome-banner{background:linear-gradient(135deg,rgba(61,255,160,.07),rgba(0,180,216,.07));border:1px solid var(--border);border-radius:var(--r);padding:1.5rem 1.4rem;margin-bottom:1.25rem;position:relative;overflow:hidden}
+.welcome-banner::before{content:'';position:absolute;top:-60px;right:-60px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(61,255,160,.06),transparent 70%);pointer-events:none}
+.welcome-banner h1{font-family:'Syne',sans-serif;font-size:clamp(1.2rem,3.5vw,1.65rem);font-weight:700;background:linear-gradient(90deg,var(--g0),var(--c0));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+.welcome-banner p{color:var(--muted);font-size:.875rem}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;transition:var(--t)}
+.stat-card:hover{border-color:rgba(0,180,216,.25)}
+.stat-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.25rem}
+.stat-val{font-family:'Syne',sans-serif;font-size:1.55rem;font-weight:700;color:var(--g0);line-height:1}
+.stat-val.cyan{color:var(--c0)}
+.stat-sub{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+.box-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.box-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;display:flex;align-items:center;gap:.85rem;cursor:pointer;transition:var(--t)}
+.box-card:hover{border-color:var(--c0)}
+.box-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:var(--t)}
+.box-status-dot.available{background:var(--g0);box-shadow:0 0 8px var(--g0)}
+.box-status-dot.busy{background:#f59e0b;box-shadow:0 0 8px #f59e0b}
+.box-label{font-size:.83rem;font-weight:500;color:var(--text)}
+.box-state{font-size:.7rem;color:var(--muted);margin-top:.05rem}
+.sec-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.85rem;margin-bottom:1.5rem}
+.quick-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.3rem 1.15rem;cursor:pointer;transition:var(--t);display:flex;flex-direction:column;gap:.65rem;position:relative;overflow:hidden}
+.quick-card::before{content:'';position:absolute;inset:0;opacity:0;transition:var(--t);background:linear-gradient(135deg,rgba(61,255,160,.05),transparent)}
+.quick-card:hover{border-color:var(--g0);transform:translateY(-2px);box-shadow:0 8px 32px rgba(61,255,160,.06)}
+.quick-card:hover::before{opacity:1}
+.quick-card.c:hover{border-color:var(--c0);box-shadow:0 8px 32px rgba(0,180,216,.06)}
+.quick-card.c::before{background:linear-gradient(135deg,rgba(0,180,216,.05),transparent)}
+.qc-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(61,255,160,.09)}
+.qc-icon.c{background:rgba(0,180,216,.09)}
+.qc-icon svg{width:20px;height:20px;stroke:var(--g0);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.qc-icon.c svg{stroke:var(--c0)}
+.qc-label{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--text)}
+.qc-desc{font-size:.8rem;color:var(--muted);line-height:1.45}
+.qc-cta{font-size:.77rem;color:var(--g0);font-weight:600;margin-top:auto}
+.quick-card.c .qc-cta{color:var(--c0)}
+.activity-list{display:flex;flex-direction:column;gap:.5rem}
+.activity-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.7rem .95rem;display:flex;align-items:center;gap:.8rem;transition:var(--t)}
+.activity-item:hover{border-color:rgba(0,180,216,.2)}
+.act-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.act-dot.g{background:var(--g0)}.act-dot.c{background:var(--c0)}.act-dot.m{background:var(--muted)}
+.act-text{font-size:.83rem;color:var(--text);flex:1;line-height:1.35}
+.act-time{font-size:.72rem;color:var(--muted);white-space:nowrap}
+
+/* ═══════════ BOX ECOGRAFÍA ═══════════ */
+.eco-layout{display:grid;gap:1rem}
+@media(min-width:700px){.eco-layout{grid-template-columns:1fr 1fr}}
+@media(min-width:1100px){.eco-layout{grid-template-columns:1fr 1fr 1fr}}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.15rem}
+.form-card-title{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--c0);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.form-card-title svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.field{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.85rem}
+.field label{font-size:.72rem;color:var(--muted);font-weight:500;letter-spacing:.03em}
+.field input,.field select,.field textarea{background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:.6rem .85rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s,background .2s;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--c0);background:rgba(0,180,216,.04)}
+.field textarea{resize:vertical;min-height:90px;line-height:1.5}
+.field select option{background:var(--panel)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.chip-group{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:.85rem}
+.chip{padding:.35rem .8rem;border-radius:99px;font-size:.78rem;font-weight:500;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:var(--t);background:transparent}
+.chip:hover{border-color:var(--c0);color:var(--c0)}
+.chip.selected{background:rgba(0,180,216,.12);border-color:var(--c0);color:var(--c0);font-weight:600}
+.informe-preview{background:var(--card2);border:1px solid var(--border2);border-radius:var(--r);padding:1.25rem;margin-top:1rem;font-size:.83rem;color:var(--muted);line-height:1.65;min-height:120px;white-space:pre-wrap;word-break:break-word;font-style:italic}
+.informe-preview.has-content{color:var(--text);font-style:normal}
+.eco-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.25rem;padding:1.1rem 1.15rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);align-items:center}
+.eco-actions .spacer{flex:1}
+.btn{padding:.58rem 1.25rem;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:var(--t);border:none;display:flex;align-items:center;gap:.45rem}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--muted);color:var(--text)}
+.btn-primary{background:linear-gradient(90deg,var(--g0),var(--c0));color:var(--dark);font-weight:700}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);box-shadow:0 6px 20px rgba(61,255,160,.2)}
+.btn-secondary{background:rgba(0,180,216,.1);border:1px solid rgba(0,180,216,.25);color:var(--c0)}
+.btn-secondary:hover{background:rgba(0,180,216,.18)}
+.btn-danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171}
+.btn-danger:hover{background:rgba(239,68,68,.18)}
+.informes-list{display:flex;flex-direction:column;gap:.6rem;margin-top:1rem}
+.informe-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;display:flex;align-items:center;gap:.85rem;transition:var(--t);cursor:pointer}
+.informe-item:hover{border-color:var(--c0);background:rgba(0,180,216,.03)}
+.ii-icon{width:36px;height:36px;border-radius:9px;background:rgba(0,180,216,.09);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ii-icon svg{width:16px;height:16px;stroke:var(--c0);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ii-info{flex:1;min-width:0}
+.ii-name{font-size:.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ii-meta{font-size:.73rem;color:var(--muted);margin-top:.08rem}
+.ii-badge{font-size:.68rem;font-weight:700;padding:.18rem .55rem;border-radius:99px;background:rgba(61,255,160,.1);color:var(--g0);border:1px solid rgba(61,255,160,.2);white-space:nowrap;flex-shrink:0}
+.ii-badge.c{background:rgba(0,180,216,.1);color:var(--c0);border-color:rgba(0,180,216,.2)}
+
+/* ═══════════ PLACEHOLDERS ═══════════ */
+.ph-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:55vh;text-align:center;gap:.9rem}
+.ph-icon{width:66px;height:66px;border-radius:18px;background:rgba(0,180,216,.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:.3rem}
+.ph-icon svg{width:30px;height:30px;stroke:var(--c0);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ph-wrap h2{font-family:'Syne',sans-serif;font-size:1.35rem;color:var(--text)}
+.ph-wrap p{color:var(--muted);font-size:.875rem;max-width:310px;line-height:1.55}
+.wip-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.28rem .85rem;border-radius:99px;background:rgba(0,180,216,.08);border:1px solid rgba(0,180,216,.2);color:var(--c0);font-size:.72rem;font-weight:600}
+.roadmap-list{margin-top:.75rem;display:flex;flex-direction:column;gap:.4rem;text-align:left;width:100%;max-width:300px}
+.roadmap-item{font-size:.8rem;color:var(--muted);padding:.4rem .7rem;border-left:2px solid var(--border);padding-left:.85rem}
+.roadmap-item strong{color:var(--text);display:block;font-size:.82rem;margin-bottom:.05rem}
+
+/* ═══════════ MODALS ═══════════ */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);width:100%;max-width:460px;padding:1.5rem;animation:fadeUp .22s ease both;max-height:90vh;overflow-y:auto}
+.modal h3{font-family:'Syne',sans-serif;font-size:1.05rem;margin-bottom:1.1rem;color:var(--text)}
+.modal-actions{display:flex;gap:.65rem;justify-content:flex-end;margin-top:1.1rem;flex-wrap:wrap}
+
+/* ═══════════ TOMA DE MUESTRAS ═══════════ */
+.muestra-grid{display:grid;gap:.75rem;margin-bottom:1.25rem}
+@media(min-width:600px){.muestra-grid{grid-template-columns:1fr 1fr}}
+.muestra-order-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;display:flex;align-items:center;gap:.85rem;transition:var(--t)}
+.muestra-order-card:hover{border-color:var(--c0)}
+.mo-num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--g0),var(--c0));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--dark);flex-shrink:0}
+.mo-info{flex:1;min-width:0}
+.mo-nombre{font-size:.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mo-meta{font-size:.72rem;color:var(--muted);margin-top:.05rem}
+.mo-badge{font-size:.67rem;font-weight:700;padding:.18rem .55rem;border-radius:99px;white-space:nowrap;flex-shrink:0}
+.mo-badge.pendiente{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.mo-badge.tomado{background:rgba(61,255,160,.1);color:var(--g0);border:1px solid rgba(61,255,160,.2)}
+.mo-badge.derivado{background:rgba(0,180,216,.1);color:var(--c0);border:1px solid rgba(0,180,216,.2)}
+.muestra-tipos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.65rem;margin-bottom:1.25rem}
+.tipo-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;text-align:center;cursor:pointer;transition:var(--t)}
+.tipo-card:hover{border-color:var(--g0);transform:translateY(-2px)}
+.tipo-card .tc-icon{font-size:1.5rem;margin-bottom:.3rem}
+.tipo-card .tc-name{font-size:.82rem;font-weight:600;color:var(--text)}
+.tipo-card .tc-desc{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+
+/* ═══════════ PROTOCOLOS ═══════════ */
+.proto-grid{display:grid;gap:.65rem}
+@media(min-width:700px){.proto-grid{grid-template-columns:1fr 1fr}}
+.proto-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem;display:flex;align-items:center;gap:.9rem;cursor:pointer;transition:var(--t)}
+.proto-card:hover{border-color:var(--c0);transform:translateY(-1px)}
+.proto-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.proto-icon svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.proto-info{flex:1}
+.proto-title{font-size:.88rem;font-weight:600;color:var(--text)}
+.proto-meta{font-size:.73rem;color:var(--muted);margin-top:.05rem}
+.proto-ext{font-size:.65rem;font-weight:700;padding:.12rem .45rem;border-radius:5px;margin-left:auto;flex-shrink:0}
+.proto-ext.pdf{background:rgba(239,68,68,.12);color:#f87171}
+.proto-ext.xlsx{background:rgba(61,255,160,.1);color:var(--g0)}
+.proto-ext.docx{background:rgba(0,180,216,.1);color:var(--c0)}
+
+/* ═══════════ REPORTES ═══════════ */
+.rep-period-row{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.rep-period-chip{padding:.35rem .85rem;border-radius:99px;font-size:.78rem;font-weight:600;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:var(--t)}
+.rep-period-chip.active{background:var(--c0);border-color:var(--c0);color:var(--dark)}
+.rep-actions-row{display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:1rem}
+.rep-table-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
+.rep-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.rep-table th{background:var(--card2);color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;padding:.6rem .9rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.rep-table td{padding:.65rem .9rem;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.rep-table tr:last-child td{border-bottom:none}
+.rep-table tr:hover td{background:rgba(255,255,255,.02)}
+.rep-estado{font-size:.68rem;font-weight:700;padding:.18rem .55rem;border-radius:99px;white-space:nowrap}
+.rep-estado.fin{background:rgba(61,255,160,.1);color:var(--g0);border:1px solid rgba(61,255,160,.2)}
+.rep-estado.proceso{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.rep-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.65rem;margin-bottom:1.25rem}
+.rep-sum-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
+.rep-sum-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem}
+.rep-sum-val{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;color:var(--g0)}
+.rep-sum-val.c{color:var(--c0)}
+
+/* ═══════════ TOAST ═══════════ */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:300;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.75rem 1.1rem;display:flex;align-items:center;gap:.65rem;font-size:.85rem;color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,.4);transform:translateY(120%);opacity:0;transition:transform .3s var(--ease),opacity .3s;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast .toast-icon{font-size:1rem}
+.toast .toast-bar{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--g0),var(--c0));border-radius:0 0 10px 10px;width:100%;transform-origin:left;animation:none}
+.toast.show .toast-bar{animation:shrink 3s linear forwards}
+@keyframes shrink{to{transform:scaleX(0)}}
+
+/* ═══════════ INSTALL BANNER ═══════════ */
+.install-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;background:var(--panel);border-top:1px solid var(--border2);padding:.9rem 1.25rem;align-items:center;gap:1rem;flex-wrap:wrap}
+.install-banner.visible{display:flex}
+.install-banner p{font-size:.85rem;color:var(--text);flex:1;min-width:180px}
+.install-banner p span{color:var(--g0);font-weight:600}
+.install-banner .btn-close-banner{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;flex-shrink:0}
+
+/* ═══════════════════════════════════════════
+   PDF PRINT — Réplica fiel al informe ViñaMed
+═══════════════════════════════════════════ */
+#pdf-informe{
+  display:none;
+  font-family:'Arial',sans-serif;
+  background:#fff;color:#111;font-size:10pt;line-height:1.55;
+}
+
+/* Franja superior */
+#pdf-informe .pdf-topbar{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:.8cm 1.5cm .5cm;border-bottom:1.5px solid #222;
+}
+#pdf-informe .pdf-topbar-logo{display:flex;align-items:center;gap:.5rem}
+#pdf-informe .pdf-topbar-logo img{height:52px;object-fit:contain}
+#pdf-informe .pdf-topbar-logo .ptl-fallback{
+  display:flex;flex-direction:column;
+}
+#pdf-informe .ptl-brand{font-size:16pt;font-weight:700;color:#00b4d8;font-family:'Arial',sans-serif;letter-spacing:-.3px}
+#pdf-informe .ptl-sub{font-size:7pt;color:#555;font-family:'Arial',sans-serif}
+#pdf-informe .pdf-centro-data{font-size:7.5pt;color:#333;line-height:1.65;text-align:right}
+
+/* Título principal */
+#pdf-informe .pdf-main-title{
+  text-align:center;font-size:12pt;font-weight:700;font-style:italic;
+  padding:.4cm 1.5cm .2cm;letter-spacing:.03em;
+}
+
+/* Tabla tipo de examen (como en el PDF real) */
+#pdf-informe .pdf-tipo-table{
+  width:calc(100% - 3cm);margin:.1cm auto .4cm;
+  border-collapse:collapse;
+}
+#pdf-informe .pdf-tipo-table th{
+  border:1px solid #000;padding:.3rem .7rem;
+  background:#f0f0f0;font-weight:700;font-size:10.5pt;
+  text-align:center;text-transform:uppercase;letter-spacing:.04em;
+}
+
+/* Tabla datos del paciente */
+#pdf-informe .pdf-pac-table{
+  width:calc(100% - 3cm);margin:0 auto .5cm;
+  border-collapse:collapse;
+}
+#pdf-informe .pdf-pac-table td{border:1px solid #000;padding:.28rem .7rem;font-size:9.5pt;vertical-align:middle}
+#pdf-informe .pdf-pac-table .lbl{font-weight:700;background:#f0f0f0;width:100px;white-space:nowrap}
+
+/* Cuerpo del informe */
+#pdf-informe .pdf-body-wrap{padding:0 1.5cm}
+#pdf-informe .pdf-tecnica{font-size:9.5pt;margin-bottom:.4cm;color:#222}
+#pdf-informe .pdf-seccion{margin-bottom:.5cm}
+#pdf-informe .pdf-seccion-h{font-size:10pt;font-weight:700;color:#111;margin-bottom:.15cm}
+#pdf-informe .pdf-seccion-body{font-size:10pt;color:#222;line-height:1.65;white-space:pre-wrap}
+
+/* Firma — fiel al original */
+#pdf-informe .pdf-firma-section{
+  margin:1cm 1.5cm 0;
+  display:flex;justify-content:flex-end;
+}
+#pdf-informe .pdf-firma-bloque{text-align:center}
+#pdf-informe .pdf-firma-svg{display:block;margin:0 auto .1cm}
+#pdf-informe .pdf-firma-line{width:220px;border-bottom:1px solid #111;margin:0 auto .18cm}
+#pdf-informe .pdf-firma-nombre{font-size:9pt;font-weight:700;font-style:italic;text-transform:uppercase;letter-spacing:.02em}
+#pdf-informe .pdf-firma-cargo{font-size:8.5pt;font-style:italic;color:#333}
+#pdf-informe .pdf-firma-rut{font-size:8pt;font-style:italic;color:#555}
+#pdf-informe .pdf-codigo-line{font-size:7.5pt;color:#777;text-align:right;padding:.3cm 1.5cm 0}
+
+@media print{
+  body>*:not(#pdf-informe){display:none!important}
+  #pdf-informe{display:block!important}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- HEADER -->
+<header>
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+    <span></span><span></span><span></span>
+  </button>
+  <a class="logo-wrap" href="#" onclick="navigate('dashboard');return false">
+    <img class="logo-img" src="logo_vinamed.png" alt="ViñaMed" onerror="this.style.display='none'">
+    <div class="logo-text"><span class="brand">ViñaMed</span><span class="sub">Portal Clínico</span></div>
+  </a>
+  <div class="spacer"></div>
+  <div class="clock" id="clock">--:--</div>
+  <div class="btn-icon-wrap">
+    <button class="btn-icon" onclick="openPatientModal()" title="Nuevo paciente">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+  <div class="btn-icon-wrap">
+    <button class="btn-icon" onclick="showToast('Sin notificaciones pendientes','ℹ️')" title="Notificaciones">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <span class="nav-label">Principal</span>
+  <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Dashboard
+  </div>
+
+  <div class="nav-divider"></div>
+  <span class="nav-label">Clínica</span>
+
+  <div class="nav-parent" id="np-atencion">
+    <div class="nav-item" onclick="toggleSub('np-atencion')">
+      <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
+      Atención Médica
+      <svg class="chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="submenu">
+      <div class="nav-item" data-page="fichas" onclick="navigate('fichas')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Fichas Rápidas
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-item" data-page="eco" onclick="navigate('eco')">
+    <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="6"/><path d="M12 6c2 3.5 2 8.5 0 12"/><path d="M2 12h20"/></svg>
+    Box Ecografía
+    <span class="nav-badge cyan" id="nb-eco">0</span>
+  </div>
+
+  <div class="nav-item" data-page="enfermeria" onclick="navigate('enfermeria')">
+    <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Box Enfermería
+  </div>
+
+  <!-- NUEVO: Toma de Muestras -->
+  <div class="nav-item" data-page="muestras" onclick="navigate('muestras')">
+    <svg viewBox="0 0 24 24"><path d="M14 2v6l3 3-7 7-7-7 3-3V2"/><line x1="14" y1="2" x2="10" y2="2"/></svg>
+    Toma de Muestras
+    <span class="nav-badge" id="nb-muestras">0</span>
+  </div>
+
+  <div class="nav-divider"></div>
+  <span class="nav-label">Gestión</span>
+
+  <div class="nav-item" data-page="inventario" onclick="navigate('inventario')">
+    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    Inventario / REAS
+  </div>
+
+  <!-- NUEVO: Protocolos -->
+  <div class="nav-item" data-page="protocolos" onclick="navigate('protocolos')">
+    <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Protocolos
+  </div>
+
+  <!-- NUEVO: Reportes -->
+  <div class="nav-item" data-page="reportes" onclick="navigate('reportes')">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Reportes
+  </div>
+
+  <div class="nav-divider"></div>
+  <div class="nav-item" onclick="openPatientModal()">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+    Nuevo Paciente
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sf-name">Ignacio</div>
+    <div class="sf-role">Enfermero · Dir. Clínico</div>
+    <span class="sf-sis">SIS N°916223</span>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main id="main">
+
+<!-- DASHBOARD -->
+<section class="page active" id="page-dashboard">
+  <div class="welcome-banner">
+    <h1>Bienvenido al Portal de ViñaMed</h1>
+    <p>Imagenología y Rehabilitación · Viña del Mar</p>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-lbl">Pacientes hoy</div><div class="stat-val" id="stat-pac">3</div><div class="stat-sub">Registrados</div></div>
+    <div class="stat-card"><div class="stat-lbl">Informes eco</div><div class="stat-val cyan" id="stat-eco">1</div><div class="stat-sub">Generados hoy</div></div>
+    <div class="stat-card"><div class="stat-lbl">Muestras</div><div class="stat-val" id="stat-muestras">2</div><div class="stat-sub">Pendientes</div></div>
+    <div class="stat-card"><div class="stat-lbl">Procedim.</div><div class="stat-val" id="stat-proc">0</div><div class="stat-sub">Enfermería</div></div>
+  </div>
+
+  <div class="sec-title">Estado de Boxes</div>
+  <div class="box-row">
+    <div class="box-card" onclick="toggleBox('eco-box')">
+      <div class="box-status-dot available" id="eco-box-dot"></div>
+      <div><div class="box-label">Box Ecografía</div><div class="box-state" id="eco-box-state">Disponible</div></div>
+    </div>
+    <div class="box-card" onclick="toggleBox('enf-box')">
+      <div class="box-status-dot available" id="enf-box-dot"></div>
+      <div><div class="box-label">Box Enfermería</div><div class="box-state" id="enf-box-state">Disponible</div></div>
+    </div>
+    <div class="box-card" onclick="toggleBox('muestras-box')">
+      <div class="box-status-dot available" id="muestras-box-dot"></div>
+      <div><div class="box-label">Sala Muestras</div><div class="box-state" id="muestras-box-state">Disponible</div></div>
+    </div>
+  </div>
+
+  <div class="sec-title">Acceso Rápido</div>
+  <div class="quick-grid">
+    <div class="quick-card c" onclick="navigate('eco')">
+      <div class="qc-icon c"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="6"/><path d="M12 6c2 3.5 2 8.5 0 12"/><path d="M2 12h20"/></svg></div>
+      <div class="qc-label">Generar Informe Eco</div>
+      <div class="qc-desc">Completa y exporta informes con plantilla oficial ViñaMed.</div>
+      <div class="qc-cta">Ir al Box →</div>
+    </div>
+    <div class="quick-card" onclick="navigate('muestras')">
+      <div class="qc-icon"><svg viewBox="0 0 24 24"><path d="M14 2v6l3 3-7 7-7-7 3-3V2"/><line x1="14" y1="2" x2="10" y2="2"/></svg></div>
+      <div class="qc-label">Toma de Muestras</div>
+      <div class="qc-desc">Registro de órdenes y seguimiento de exámenes de laboratorio.</div>
+      <div class="qc-cta">Ir a Sala →</div>
+    </div>
+    <div class="quick-card c" onclick="navigate('reportes')">
+      <div class="qc-icon c"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+      <div class="qc-label">Reporte del Día</div>
+      <div class="qc-desc">Descarga el desglose diario en CSV o Excel.</div>
+      <div class="qc-cta">Ver reportes →</div>
+    </div>
+    <div class="quick-card" onclick="openPatientModal()">
+      <div class="qc-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="qc-label">Registrar Paciente</div>
+      <div class="qc-desc">Ingresa un nuevo paciente para el turno actual.</div>
+      <div class="qc-cta">Nuevo registro →</div>
+    </div>
+  </div>
+
+  <div class="sec-title">Actividad Reciente</div>
+  <div class="activity-list" id="activity-list">
+    <div class="activity-item"><div class="act-dot c"></div><div class="act-text"><strong>María González</strong> — Ecografía abdominal · Box Eco</div><div class="act-time">09:45</div></div>
+    <div class="activity-item"><div class="act-dot g"></div><div class="act-text"><strong>Carlos Muñoz</strong> — Hemograma + PCR · Sala Muestras</div><div class="act-time">10:20</div></div>
+    <div class="activity-item"><div class="act-dot c"></div><div class="act-text"><strong>Ana Ramírez</strong> — Ecografía partes blandas rodilla · Box Eco</div><div class="act-time">11:00</div></div>
+  </div>
+</section>
+
+<!-- BOX ECOGRAFÍA -->
+<section class="page" id="page-eco">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;color:var(--text)">Box Ecografía</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:.1rem">Generación de informes de imagenología</div>
+    </div>
+    <button class="btn btn-primary" onclick="openEcoForm()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Nuevo Informe
+    </button>
+  </div>
+
+  <div id="eco-form-wrap" style="display:none">
+    <div class="eco-layout">
+      <!-- Datos del paciente -->
+      <div class="form-card">
+        <div class="form-card-title"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Datos del Paciente</div>
+        <div class="field"><label>Nombre completo *</label><input id="eco-nombre" type="text" placeholder="Ej: Juan Pérez González"></div>
+        <div class="field-row">
+          <div class="field"><label>RUT</label><input id="eco-rut" type="text" placeholder="12.345.678-9"></div>
+          <div class="field"><label>Edad</label><input id="eco-edad" type="number" min="0" max="120" placeholder="42"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Sexo</label>
+            <select id="eco-sexo"><option value="">—</option><option>Masculino</option><option>Femenino</option><option>No especifica</option></select>
+          </div>
+          <div class="field"><label>Fecha examen</label><input id="eco-fecha" type="date"></div>
+        </div>
+        <div class="field"><label>Médico solicitante</label><input id="eco-solicitante" type="text" placeholder="Dr. / Dra."></div>
+        <div class="field"><label>Código de examen</label><input id="eco-codigo" type="text" placeholder="Ej: 0404016"></div>
+      </div>
+
+      <!-- Tipo de examen -->
+      <div class="form-card">
+        <div class="form-card-title"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="6"/><path d="M12 6c2 3.5 2 8.5 0 12"/><path d="M2 12h20"/></svg>Tipo de Examen</div>
+        <div class="field">
+          <label>Seleccionar tipo *</label>
+          <div class="chip-group" id="chip-group">
+            <div class="chip" onclick="selectChip(this,'Abdominal')">Abdominal</div>
+            <div class="chip" onclick="selectChip(this,'Pélvico')">Pélvico</div>
+            <div class="chip" onclick="selectChip(this,'Partes Blandas')">Partes Blandas</div>
+            <div class="chip" onclick="selectChip(this,'Articular')">Articular</div>
+            <div class="chip" onclick="selectChip(this,'Musculotendinoso')">Musculotendinoso</div>
+            <div class="chip" onclick="selectChip(this,'Cervical / Tiroideo')">Cervical / Tiroideo</div>
+            <div class="chip" onclick="selectChip(this,'Obstétrico')">Obstétrico</div>
+            <div class="chip" onclick="selectChip(this,'Doppler Vascular')">Doppler Vascular</div>
+            <div class="chip" onclick="selectChip(this,'Otro')">Otro</div>
+          </div>
+        </div>
+        <div class="field"><label>Región anatómica / detalle</label><input id="eco-region" type="text" placeholder="Ej: Codo izquierdo, hígado, tiroides..."></div>
+        <div class="field"><label>Indicación clínica</label><input id="eco-indicacion" type="text" placeholder="Ej: Dolor en epicóndilo, control nódulo tiroideo"></div>
+        <div class="field"><label>Médico informante *</label>
+          <select id="eco-informante">
+            <option value="">Seleccionar médico...</option>
+            <option value="Dr. Álvaro Trullenque Sánchez|MÉDICO RADIÓLOGO|7.268.691-8">Dr. Álvaro Trullenque Sánchez</option>
+            <option value="Dr. [Médico de turno]|MÉDICO|—">Dr. [Médico de turno]</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Informe -->
+      <div class="form-card">
+        <div class="form-card-title"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Informe</div>
+        <div class="field"><label>Hallazgos *</label><textarea id="eco-hallazgos" rows="5" placeholder="Describa los hallazgos ecográficos observados..."></textarea></div>
+        <div class="field"><label>Impresión ecográfica *</label><textarea id="eco-diagnostico" rows="3" placeholder="Conclusión / impresión diagnóstica..."></textarea></div>
+        <div class="field"><label>Recomendaciones (opcional)</label><textarea id="eco-recomendaciones" rows="2" placeholder="Seguimiento, controles, derivaciones..."></textarea></div>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:1.1rem 1.15rem">
+      <div style="font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;color:var(--g0);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.65rem">Vista previa del informe</div>
+      <div class="informe-preview" id="eco-preview">Completar los campos para generar la vista previa...</div>
+    </div>
+
+    <div class="eco-actions">
+      <button class="btn btn-ghost" onclick="clearEcoForm()">
+        <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.69"/></svg>
+        Limpiar
+      </button>
+      <div class="spacer"></div>
+      <button class="btn btn-secondary" onclick="previewPDF()">
+        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Vista previa PDF
+      </button>
+      <button class="btn btn-primary" onclick="saveEcoInforme()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+        Guardar e Imprimir
+      </button>
+    </div>
+  </div>
+
+  <div id="eco-list-wrap">
+    <div class="sec-title">Informes del Turno</div>
+    <div class="informes-list" id="informes-list">
+      <div class="informe-item">
+        <div class="ii-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="ii-info"><div class="ii-name">Ana Ramírez</div><div class="ii-meta">Ecografía Partes Blandas · Rodilla derecha · 11:00</div></div>
+        <span class="ii-badge c">Completado</span>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem;padding:1rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r)">
+      <div style="font-size:.8rem;color:var(--muted);text-align:center">
+        💡 Los informes usan la plantilla oficial ViñaMed con firma del médico informante.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BOX ENFERMERÍA -->
+<section class="page" id="page-enfermeria">
+  <div class="ph-wrap">
+    <div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+    <div class="wip-badge">🔧 Próximo módulo</div>
+    <h2>Box Enfermería</h2>
+    <p>Hoja de procedimientos, administración de medicamentos y curación avanzada de heridas.</p>
+    <div class="roadmap-list">
+      <div class="roadmap-item"><strong>Hoja de procedimiento</strong>Tipo de herida, clasificación, técnica, materiales</div>
+      <div class="roadmap-item"><strong>Medicación administrada</strong>Nombre, dosis, vía, hora, responsable (SIS)</div>
+      <div class="roadmap-item"><strong>Signos vitales</strong>PA, FC, FR, SatO₂, glicemia capilar</div>
+      <div class="roadmap-item"><strong>Exportación PDF</strong>Hoja imprimible con firma del enfermero</div>
+    </div>
+  </div>
+</section>
+
+<!-- FICHAS RÁPIDAS -->
+<section class="page" id="page-fichas">
+  <div class="ph-wrap">
+    <div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+    <div class="wip-badge">🔧 Próximo módulo</div>
+    <h2>Fichas Rápidas</h2>
+    <p>Registro simplificado de atención médica con historial por paciente y búsqueda por RUT.</p>
+  </div>
+</section>
+
+<!-- INVENTARIO -->
+<section class="page" id="page-inventario">
+  <div class="ph-wrap">
+    <div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+    <div class="wip-badge">🔧 Próximo módulo</div>
+    <h2>Inventario / REAS</h2>
+    <p>Control de insumos clínicos, alertas de stock crítico y registro de residuos especiales (REAS).</p>
+  </div>
+</section>
+
+<!-- ═══════ TOMA DE MUESTRAS (NUEVO) ═══════ -->
+<section class="page" id="page-muestras">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;color:var(--text)">Sala de Toma de Muestras</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:.1rem">Registro y seguimiento de exámenes de laboratorio</div>
+    </div>
+    <button class="btn btn-primary" onclick="openMuestraModal()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Nueva orden
+    </button>
+  </div>
+
+  <div class="sec-title">Tipos de examen disponibles</div>
+  <div class="muestra-tipos-grid">
+    <div class="tipo-card" onclick="openMuestraModal('Hemograma')">
+      <div class="tc-icon">🩸</div>
+      <div class="tc-name">Hemograma</div>
+      <div class="tc-desc">Sangre venosa · EDTA</div>
+    </div>
+    <div class="tipo-card" onclick="openMuestraModal('Bioquímica')">
+      <div class="tc-icon">🧪</div>
+      <div class="tc-name">Bioquímica</div>
+      <div class="tc-desc">Glucosa, perfil lipídico, hepático</div>
+    </div>
+    <div class="tipo-card" onclick="openMuestraModal('Orina completa')">
+      <div class="tc-icon">💛</div>
+      <div class="tc-name">Orina completa</div>
+      <div class="tc-desc">Muestra de orina · Frasco estéril</div>
+    </div>
+    <div class="tipo-card" onclick="openMuestraModal('Cultivo')">
+      <div class="tc-icon">🔬</div>
+      <div class="tc-name">Cultivo</div>
+      <div class="tc-desc">Urocultivo, coprocultivo, frotis</div>
+    </div>
+    <div class="tipo-card" onclick="openMuestraModal('Serología')">
+      <div class="tc-icon">🧫</div>
+      <div class="tc-name">Serología</div>
+      <div class="tc-desc">VIH, hepatitis, VDRL</div>
+    </div>
+    <div class="tipo-card" onclick="openMuestraModal('Otro')">
+      <div class="tc-icon">➕</div>
+      <div class="tc-name">Otro</div>
+      <div class="tc-desc">Examen personalizado</div>
+    </div>
+  </div>
+
+  <div class="sec-title">Órdenes activas</div>
+  <div id="muestras-list" class="muestra-grid">
+    <div class="muestra-order-card">
+      <div class="mo-num">1</div>
+      <div class="mo-info">
+        <div class="mo-nombre">Carlos Muñoz</div>
+        <div class="mo-meta">Hemograma + PCR · Diagnomed · 10:20</div>
+      </div>
+      <span class="mo-badge pendiente">Pendiente</span>
+    </div>
+    <div class="muestra-order-card">
+      <div class="mo-num">2</div>
+      <div class="mo-info">
+        <div class="mo-nombre">Sofía Vega</div>
+        <div class="mo-meta">Orina completa · Laboclin · 10:45</div>
+      </div>
+      <span class="mo-badge pendiente">Pendiente</span>
+    </div>
+  </div>
+
+  <div class="sec-title">Laboratorios convenio</div>
+  <div class="proto-grid">
+    <div class="proto-card">
+      <div class="proto-icon" style="background:rgba(61,255,160,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--g0)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Diagnomed</div><div class="proto-meta">Convenio activo · Retiro en centro</div></div>
+      <span class="proto-ext docx" style="background:rgba(61,255,160,.1);color:var(--g0)">Activo</span>
+    </div>
+    <div class="proto-card">
+      <div class="proto-icon" style="background:rgba(0,180,216,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--c0)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Etcheverry Lab</div><div class="proto-meta">Oferta verbal 25% margen · Logística incluida</div></div>
+      <span class="proto-ext" style="background:rgba(245,158,11,.1);color:#f59e0b">Verbal</span>
+    </div>
+    <div class="proto-card">
+      <div class="proto-icon" style="background:rgba(0,180,216,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--c0)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Laboclin</div><div class="proto-meta">Negociación en curso · lab@laboclin.cl</div></div>
+      <span class="proto-ext" style="background:rgba(245,158,11,.1);color:#f59e0b">En proceso</span>
+    </div>
+    <div class="proto-card">
+      <div class="proto-icon" style="background:rgba(148,163,184,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--muted)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Bionet / Endoclin</div><div class="proto-meta">Sin respuesta · Seguimiento pendiente</div></div>
+      <span class="proto-ext" style="background:rgba(148,163,184,.1);color:var(--muted)">Pendiente</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ PROTOCOLOS (NUEVO) ═══════ -->
+<section class="page" id="page-protocolos">
+  <div style="margin-bottom:1.25rem">
+    <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;color:var(--text)">Protocolos y Documentos</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-top:.1rem">Accede a planillas, protocolos clínicos y formularios del centro</div>
+  </div>
+
+  <div class="sec-title">Protocolo Clínico</div>
+  <div class="proto-grid" style="margin-bottom:1.25rem">
+    <div class="proto-card" onclick="showToast('Protocolo de Curación — cargando...','📋')">
+      <div class="proto-icon" style="background:rgba(239,68,68,.08)"><svg viewBox="0 0 24 24" style="stroke:#f87171"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Protocolo de Curación Avanzada</div><div class="proto-meta">Actualizado marzo 2025</div></div>
+      <span class="proto-ext pdf">PDF</span>
+    </div>
+    <div class="proto-card" onclick="showToast('Manual de Procedimientos — cargando...','📋')">
+      <div class="proto-icon" style="background:rgba(239,68,68,.08)"><svg viewBox="0 0 24 24" style="stroke:#f87171"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Manual de Normas y Procedimientos</div><div class="proto-meta">DS 283 / SEREMI V Región</div></div>
+      <span class="proto-ext pdf">PDF</span>
+    </div>
+    <div class="proto-card" onclick="showToast('Protocolo REAS — cargando...','📋')">
+      <div class="proto-icon" style="background:rgba(239,68,68,.08)"><svg viewBox="0 0 24 24" style="stroke:#f87171"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Protocolo REAS</div><div class="proto-meta">Residuos sólidos especiales hospitalarios</div></div>
+      <span class="proto-ext pdf">PDF</span>
+    </div>
+    <div class="proto-card" onclick="showToast('Protocolo de Toma de Muestras — cargando...','📋')">
+      <div class="proto-icon" style="background:rgba(239,68,68,.08)"><svg viewBox="0 0 24 24" style="stroke:#f87171"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Protocolo Toma de Muestras</div><div class="proto-meta">Sala de muestras · ViñaMed</div></div>
+      <span class="proto-ext pdf">PDF</span>
+    </div>
+  </div>
+
+  <div class="sec-title">Planillas y Formularios</div>
+  <div class="proto-grid" style="margin-bottom:1.25rem">
+    <div class="proto-card" onclick="showToast('Planilla de control de stock — abriendo...','📊')">
+      <div class="proto-icon" style="background:rgba(61,255,160,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--g0)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Control de Stock de Insumos</div><div class="proto-meta">Inventario botiquín · Actualizado</div></div>
+      <span class="proto-ext xlsx">XLSX</span>
+    </div>
+    <div class="proto-card" onclick="showToast('Planilla REAS mensual — abriendo...','📊')">
+      <div class="proto-icon" style="background:rgba(61,255,160,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--g0)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Planilla REAS Mensual</div><div class="proto-meta">Registro para auditoría SEREMI</div></div>
+      <span class="proto-ext xlsx">XLSX</span>
+    </div>
+    <div class="proto-card" onclick="showToast('Hoja de Procedimiento Enfermería — abriendo...','📄')">
+      <div class="proto-icon" style="background:rgba(0,180,216,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--c0)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Hoja de Procedimiento Enfermería</div><div class="proto-meta">Curación, medicación, signos vitales</div></div>
+      <span class="proto-ext docx">DOCX</span>
+    </div>
+    <div class="proto-card" onclick="showToast('Consentimiento informado — abriendo...','📄')">
+      <div class="proto-icon" style="background:rgba(0,180,216,.09)"><svg viewBox="0 0 24 24" style="stroke:var(--c0)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="proto-info"><div class="proto-title">Consentimiento Informado</div><div class="proto-meta">Procedimientos invasivos</div></div>
+      <span class="proto-ext docx">DOCX</span>
+    </div>
+  </div>
+
+  <div style="padding:1rem;background:var(--card);border:1px dashed var(--border);border-radius:var(--r);text-align:center">
+    <div style="font-size:.8rem;color:var(--muted)">📁 Puedes agregar documentos reales arrastrándolos aquí (funcionalidad disponible con backend)</div>
+  </div>
+</section>
+
+<!-- ═══════ REPORTES (NUEVO) ═══════ -->
+<section class="page" id="page-reportes">
+  <div style="margin-bottom:1.25rem">
+    <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;color:var(--text)">Reportes y Estadísticas</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-top:.1rem">Desglose de exámenes por período · Exportable a CSV y Excel</div>
+  </div>
+
+  <div class="rep-period-row">
+    <div class="rep-period-chip active" onclick="setPeriod(this,'dia')">Hoy</div>
+    <div class="rep-period-chip" onclick="setPeriod(this,'semana')">Esta semana</div>
+    <div class="rep-period-chip" onclick="setPeriod(this,'mes')">Este mes</div>
+    <div class="rep-period-chip" onclick="setPeriod(this,'custom')">Personalizado</div>
+  </div>
+
+  <div class="rep-summary">
+    <div class="rep-sum-card"><div class="rep-sum-lbl">Total exámenes</div><div class="rep-sum-val" id="rs-total">4</div></div>
+    <div class="rep-sum-card"><div class="rep-sum-lbl">Ecografías</div><div class="rep-sum-val c" id="rs-eco">2</div></div>
+    <div class="rep-sum-card"><div class="rep-sum-lbl">Muestras</div><div class="rep-sum-val" id="rs-muestras">2</div></div>
+    <div class="rep-sum-card"><div class="rep-sum-lbl">Fin de atención</div><div class="rep-sum-val" id="rs-fin">2</div></div>
+  </div>
+
+  <div class="rep-actions-row">
+    <button class="btn btn-primary" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descargar CSV
+    </button>
+    <button class="btn btn-secondary" onclick="exportExcel()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descargar Excel
+    </button>
+    <button class="btn btn-ghost" onclick="printReporte()">
+      <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Imprimir
+    </button>
+  </div>
+
+  <div class="rep-table-wrap">
+    <table class="rep-table" id="rep-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Paciente</th>
+          <th>Tipo de examen</th>
+          <th>Box / Sala</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="rep-tbody">
+        <tr>
+          <td>05/04/2026</td>
+          <td>MARÍA GONZÁLEZ</td>
+          <td>Ecografía Abdominal</td>
+          <td>Box Ecografía</td>
+          <td><span class="rep-estado fin">Fin de atención</span></td>
+        </tr>
+        <tr>
+          <td>05/04/2026</td>
+          <td>CARLOS MUÑOZ</td>
+          <td>Hemograma + PCR</td>
+          <td>Sala Muestras</td>
+          <td><span class="rep-estado proceso">En proceso</span></td>
+        </tr>
+        <tr>
+          <td>05/04/2026</td>
+          <td>ANA RAMÍREZ</td>
+          <td>Ecografía Partes Blandas</td>
+          <td>Box Ecografía</td>
+          <td><span class="rep-estado fin">Fin de atención</span></td>
+        </tr>
+        <tr>
+          <td>05/04/2026</td>
+          <td>SOFÍA VEGA</td>
+          <td>Orina completa</td>
+          <td>Sala Muestras</td>
+          <td><span class="rep-estado proceso">En proceso</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════ MODAL PACIENTE ═══════ -->
+<div class="modal-overlay" id="patientModal">
+  <div class="modal">
+    <h3>👤 Registrar Paciente</h3>
+    <div class="field"><label>Nombre completo *</label><input id="p-nombre" type="text" placeholder="Juan Pérez González"></div>
+    <div class="field-row">
+      <div class="field"><label>RUT *</label><input id="p-rut" type="text" placeholder="12.345.678-9"></div>
+      <div class="field"><label>Edad</label><input id="p-edad" type="number" placeholder="35" min="0" max="120"></div>
+    </div>
+    <div class="field"><label>Motivo de consulta</label><input id="p-motivo" type="text" placeholder="Ej: Ecografía abdominal"></div>
+    <div class="field"><label>Box de atención</label>
+      <select id="p-box">
+        <option value="">Sin asignar</option>
+        <option value="eco">Box Ecografía</option>
+        <option value="enfermeria">Box Enfermería</option>
+        <option value="muestras">Sala Muestras</option>
+        <option value="atencion">Atención Médica</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePatientModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePatient()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL MUESTRA ═══════ -->
+<div class="modal-overlay" id="muestraModal">
+  <div class="modal">
+    <h3>🧪 Nueva Orden de Muestra</h3>
+    <div class="field"><label>Paciente *</label><input id="m-nombre" type="text" placeholder="Nombre del paciente"></div>
+    <div class="field-row">
+      <div class="field"><label>RUT *</label><input id="m-rut" type="text" placeholder="12.345.678-9"></div>
+      <div class="field"><label>Edad</label><input id="m-edad" type="number" placeholder="35" min="0" max="120"></div>
+    </div>
+    <div class="field"><label>Tipo de examen *</label>
+      <select id="m-tipo">
+        <option value="">Seleccionar...</option>
+        <option>Hemograma</option><option>Hemograma + PCR</option><option>Bioquímica básica</option>
+        <option>Perfil lipídico</option><option>Perfil hepático</option><option>Perfil tiroídeo</option>
+        <option>Orina completa</option><option>Urocultivo</option><option>Serología VIH</option>
+        <option>VDRL</option><option>Hepatitis B/C</option><option>Coprocultivo</option><option>Otro</option>
+      </select>
+    </div>
+    <div class="field"><label>Médico solicitante</label><input id="m-solicitante" type="text" placeholder="Dr. / Dra."></div>
+    <div class="field"><label>Laboratorio destino</label>
+      <select id="m-lab">
+        <option value="">Seleccionar laboratorio...</option>
+        <option>Diagnomed</option><option>Etcheverry Lab</option><option>Laboclin</option>
+        <option>Bionet</option><option>Endoclin</option>
+      </select>
+    </div>
+    <div class="field"><label>Observaciones</label><input id="m-obs" type="text" placeholder="Ayuno, condiciones especiales..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeMuestraModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMuestra()">Registrar orden</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PDF INFORME (réplica oficial) ═══════════════════════ -->
+<div id="pdf-informe">
+
+  <!-- Header con logo y datos del centro -->
+  <div class="pdf-topbar">
+    <div class="pdf-topbar-logo">
+      <img src="logo_vinamed.png" alt="ViñaMed" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="ptl-fallback" style="display:none">
+        <span class="ptl-brand">ViñaMed</span>
+        <span class="ptl-sub">Imagenología y Rehabilitación</span>
+      </div>
+    </div>
+    <div class="pdf-centro-data">
+      VIÑAMED - Centro de imagenología y rehabilitación física<br>
+      Medio Oriente 831, Oficina 408, Edificio Olympo, Viña del Mar, Chile<br>
+      Teléfono: 934222146<br>
+      contacto@vinamed.cl<br>
+      www.vinamed.cl
+    </div>
+  </div>
+
+  <!-- Título -->
+  <div class="pdf-main-title">INFORME ECOGRÁFICO</div>
+
+  <!-- Tabla tipo de examen -->
+  <table class="pdf-tipo-table">
+    <tr><th id="pdf-tipo-header">ECOGRAFÍA PARTES BLANDAS: REGIÓN</th></tr>
+  </table>
+
+  <!-- Tabla datos del paciente -->
+  <table class="pdf-pac-table">
+    <tr>
+      <td class="lbl">Paciente</td>
+      <td class="dt-value" id="pdf-pac-nombre">—</td>
+      <td class="lbl">Edad</td>
+      <td class="dt-value" id="pdf-pac-edad">—</td>
+    </tr>
+    <tr>
+      <td class="lbl">Rut</td>
+      <td class="dt-value" id="pdf-pac-rut">—</td>
+      <td class="lbl">Sexo</td>
+      <td class="dt-value" id="pdf-pac-sexo">—</td>
+    </tr>
+    <tr>
+      <td class="lbl">Fecha de examen</td>
+      <td class="dt-value" id="pdf-pac-fecha">—</td>
+      <td class="lbl">Código</td>
+      <td class="dt-value" id="pdf-pac-codigo">—</td>
+    </tr>
+  </table>
+
+  <!-- Cuerpo del informe -->
+  <div class="pdf-body-wrap">
+    <p class="pdf-tecnica" id="pdf-tecnica-val">Con transductor de alta resolución se realiza barrido sonográfico en </p>
+
+    <div class="pdf-seccion">
+      <div class="pdf-seccion-h">Hallazgos</div>
+      <div class="pdf-seccion-body" id="pdf-hallazgos-val">—</div>
+    </div>
+
+    <div class="pdf-seccion">
+      <div class="pdf-seccion-h">Impresión ecográfica</div>
+      <div class="pdf-seccion-body" id="pdf-diag-val">—</div>
+    </div>
+
+    <div class="pdf-seccion" id="pdf-rec-section" style="display:none">
+      <div class="pdf-seccion-h">Recomendaciones</div>
+      <div class="pdf-seccion-body" id="pdf-rec-val">—</div>
+    </div>
+  </div>
+
+  <!-- Firma — réplica de la firma manuscrita del PDF original -->
+  <div class="pdf-firma-section">
+    <div class="pdf-firma-bloque">
+      <!-- Firma SVG estilizada — réplica del trazo del Dr. Trullenque -->
+      <svg class="pdf-firma-svg" width="180" height="60" viewBox="0 0 180 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 45 C30 20, 45 15, 55 28 C60 35, 62 38, 68 30 C75 20, 80 15, 90 25
+                 C95 30, 98 35, 105 25 C112 14, 118 12, 125 22
+                 C130 28, 135 35, 145 28 C152 22, 158 18, 165 30"
+              stroke="#111" stroke-width="1.5" fill="none"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M18 48 C35 44, 80 42, 165 44"
+              stroke="#111" stroke-width=".8" fill="none" opacity=".4"/>
+      </svg>
+      <div class="pdf-firma-line"></div>
+      <div class="pdf-firma-nombre" id="pdf-firma-nombre">Dr. Álvaro Trullenque Sánchez</div>
+      <div class="pdf-firma-cargo" id="pdf-firma-cargo">MÉDICO RADIÓLOGO</div>
+      <div class="pdf-firma-rut" id="pdf-firma-rut">Rut: 7.268.691-8</div>
+    </div>
+  </div>
+
+  <div class="pdf-codigo-line" id="pdf-codigo-bottom"></div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toast-icon">✅</span>
+  <span id="toast-msg">Mensaje</span>
+  <div class="toast-bar"></div>
+</div>
+
+<!-- INSTALL BANNER -->
+<div class="install-banner" id="installBanner">
+  <p>📲 Instala <span>ViñaMed</span> como aplicación en este PC.</p>
+  <button class="btn btn-primary" id="btnInstall" onclick="installPWA()">
+    <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Instalar app
+  </button>
+  <button class="btn-close-banner" onclick="document.getElementById('installBanner').classList.remove('visible')">✕</button>
+</div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────
+const App = {
+  patients: [
+    { id:1, nombre:'María González', rut:'10.234.567-8', edad:45, motivo:'Ecografía abdominal', box:'eco', timestamp:'09:45', date:new Date().toLocaleDateString('es-CL'), tipo:'Ecografía Abdominal', estado:'Fin de atención' },
+    { id:2, nombre:'Carlos Muñoz',   rut:'14.876.543-2', edad:62, motivo:'Hemograma + PCR',    box:'muestras', timestamp:'10:20', date:new Date().toLocaleDateString('es-CL'), tipo:'Hemograma + PCR', estado:'En proceso' },
+    { id:3, nombre:'Ana Ramírez',    rut:'17.543.210-K', edad:38, motivo:'Ecografía partes blandas', box:'eco', timestamp:'11:00', date:new Date().toLocaleDateString('es-CL'), tipo:'Ecografía Partes Blandas', estado:'Fin de atención' },
+    { id:4, nombre:'Sofía Vega',     rut:'19.876.543-1', edad:28, motivo:'Orina completa', box:'muestras', timestamp:'10:45', date:new Date().toLocaleDateString('es-CL'), tipo:'Orina completa', estado:'En proceso' },
+  ],
+  informes: [
+    { id:1, nombre:'Ana Ramírez', tipo:'Partes Blandas', region:'Rodilla derecha', timestamp:'11:00' }
+  ],
+  muestras: [
+    { id:1, nombre:'Carlos Muñoz', rut:'14.876.543-2', tipo:'Hemograma + PCR', lab:'Diagnomed', timestamp:'10:20', estado:'pendiente' },
+    { id:2, nombre:'Sofía Vega',   rut:'19.876.543-1', tipo:'Orina completa',   lab:'Laboclin',  timestamp:'10:45', estado:'pendiente' },
+  ],
+  boxStates:{ 'eco-box':false, 'enf-box':false, 'muestras-box':false },
+  currentPage:'dashboard', selectedTipo:'', currentPeriod:'dia',
+};
+
+// ─── CLOCK ──────────────────────────────────────────────
+function updateClock(){const n=new Date();document.getElementById('clock').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`}
+updateClock(); setInterval(updateClock,30000);
+
+// ─── NAVIGATION ─────────────────────────────────────────
+function navigate(pageId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.remove('active'));
+  const target=document.getElementById('page-'+pageId);
+  if(target)target.classList.add('active');
+  const ni=document.querySelector(`.nav-item[data-page="${pageId}"]`);
+  if(ni){ni.classList.add('active');const par=ni.closest('.nav-parent');if(par)par.classList.add('open')}
+  App.currentPage=pageId;
+  closeSidebar();
+  if(pageId==='eco')showEcoList();
+  if(pageId==='reportes')renderReportTable();
+}
+
+// ─── SIDEBAR ────────────────────────────────────────────
+function toggleSidebar(){const o=document.getElementById('sidebar').classList.toggle('open');document.body.classList.toggle('sidebar-open',o)}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.body.classList.remove('sidebar-open')}
+function toggleSub(id){document.getElementById(id).classList.toggle('open')}
+
+// ─── BOX STATUS ─────────────────────────────────────────
+function toggleBox(boxId){
+  App.boxStates[boxId]=!App.boxStates[boxId];
+  const busy=App.boxStates[boxId];
+  const dot=document.getElementById(boxId+'-dot');
+  const state=document.getElementById(boxId+'-state');
+  if(dot)dot.className='box-status-dot '+(busy?'busy':'available');
+  if(state)state.textContent=busy?'Ocupado':'Disponible';
+  showToast(busy?'Box marcado como ocupado':'Box disponible',busy?'🔴':'🟢');
+}
+
+// ─── PATIENT MODAL ──────────────────────────────────────
+function openPatientModal(){document.getElementById('patientModal').classList.add('open')}
+function closePatientModal(){document.getElementById('patientModal').classList.remove('open');['p-nombre','p-rut','p-edad','p-motivo','p-box'].forEach(id=>document.getElementById(id).value='')}
+
+function savePatient(){
+  const nombre=document.getElementById('p-nombre').value.trim();
+  const rut=document.getElementById('p-rut').value.trim();
+  if(!nombre||!rut){showToast('Completa nombre y RUT','⚠️');return}
+  const boxVal=document.getElementById('p-box').value;
+  const tipoMap={eco:'Ecografía',enfermeria:'Procedimiento Enfermería',muestras:'Toma de Muestras',atencion:'Atención Médica','':`Sin asignar`};
+  const patient={id:Date.now(),nombre,rut,edad:document.getElementById('p-edad').value,
+    motivo:document.getElementById('p-motivo').value.trim(),box:boxVal,
+    timestamp:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),
+    date:new Date().toLocaleDateString('es-CL'),tipo:tipoMap[boxVal]||'Atención',estado:'En proceso'};
+  App.patients.push(patient);
+  updateDashboardStats();
+  addActivity(patient);
+  renderReportTable();
+  closePatientModal();
+  showToast(`${nombre} registrado correctamente`,'✅');
+}
+
+function updateDashboardStats(){
+  document.getElementById('stat-pac').textContent=App.patients.length;
+  document.getElementById('stat-eco').textContent=App.informes.length;
+  document.getElementById('stat-muestras').textContent=App.muestras.filter(m=>m.estado==='pendiente').length;
+  document.getElementById('nb-eco').textContent=App.informes.length;
+  document.getElementById('nb-muestras').textContent=App.muestras.filter(m=>m.estado==='pendiente').length;
+}
+
+function addActivity(patient){
+  const list=document.getElementById('activity-list');
+  const boxLabels={eco:'Box Eco',enfermeria:'Box Enfermería',muestras:'Sala Muestras',atencion:'Atención','':`Sin box`};
+  const dots=['g','c','m'];
+  const item=document.createElement('div');
+  item.className='activity-item';
+  item.innerHTML=`<div class="act-dot ${dots[App.patients.length%3]}"></div><div class="act-text"><strong>${patient.nombre}</strong> — ${patient.motivo||'Consulta'} · ${boxLabels[patient.box]||'—'}</div><div class="act-time">${patient.timestamp}</div>`;
+  list.prepend(item);
+}
+
+// ─── MUESTRA MODAL ──────────────────────────────────────
+function openMuestraModal(tipo=''){
+  document.getElementById('muestraModal').classList.add('open');
+  if(tipo&&tipo!=='Otro')document.getElementById('m-tipo').value=tipo;
+}
+function closeMuestraModal(){
+  document.getElementById('muestraModal').classList.remove('open');
+  ['m-nombre','m-rut','m-edad','m-solicitante','m-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-tipo').value='';
+  document.getElementById('m-lab').value='';
+}
+function saveMuestra(){
+  const nombre=document.getElementById('m-nombre').value.trim();
+  const rut=document.getElementById('m-rut').value.trim();
+  const tipo=document.getElementById('m-tipo').value;
+  if(!nombre||!rut||!tipo){showToast('Completa nombre, RUT y tipo','⚠️');return}
+  const lab=document.getElementById('m-lab').value;
+  const m={id:Date.now(),nombre,rut,tipo,lab,obs:document.getElementById('m-obs').value.trim(),
+    timestamp:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),estado:'pendiente'};
+  App.muestras.push(m);
+  // Add to patients list for reports
+  App.patients.push({id:Date.now()+1,nombre,rut,edad:document.getElementById('m-edad').value,
+    motivo:tipo,box:'muestras',timestamp:m.timestamp,date:new Date().toLocaleDateString('es-CL'),
+    tipo,estado:'En proceso'});
+  updateDashboardStats();
+  addMuestraToList(m);
+  renderReportTable();
+  closeMuestraModal();
+  showToast(`Orden de ${nombre} registrada`,'🧪');
+}
+function addMuestraToList(m){
+  const list=document.getElementById('muestras-list');
+  const num=App.muestras.length;
+  const card=document.createElement('div');
+  card.className='muestra-order-card';
+  card.innerHTML=`<div class="mo-num">${num}</div><div class="mo-info"><div class="mo-nombre">${m.nombre}</div><div class="mo-meta">${m.tipo} · ${m.lab||'Sin lab'} · ${m.timestamp}</div></div><span class="mo-badge pendiente">Pendiente</span>`;
+  list.prepend(card);
+}
+
+// ─── BOX ECOGRAFÍA ──────────────────────────────────────
+function openEcoForm(){
+  document.getElementById('eco-form-wrap').style.display='block';
+  document.getElementById('eco-list-wrap').style.display='none';
+  document.getElementById('eco-fecha').value=new Date().toISOString().split('T')[0];
+}
+function showEcoList(){
+  document.getElementById('eco-form-wrap').style.display='none';
+  document.getElementById('eco-list-wrap').style.display='block';
+}
+function selectChip(el,tipo){
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  App.selectedTipo=tipo;
+  updateEcoPreview();
+}
+['eco-nombre','eco-rut','eco-edad','eco-sexo','eco-fecha','eco-solicitante','eco-codigo',
+ 'eco-region','eco-indicacion','eco-informante','eco-hallazgos','eco-diagnostico','eco-recomendaciones']
+.forEach(id=>{const el=document.getElementById(id);if(el){el.addEventListener('input',updateEcoPreview);if(el.tagName==='SELECT')el.addEventListener('change',updateEcoPreview)}});
+
+function updateEcoPreview(){
+  const nombre=document.getElementById('eco-nombre').value.trim();
+  const hallazgos=document.getElementById('eco-hallazgos').value.trim();
+  const tipo=App.selectedTipo;
+  const region=document.getElementById('eco-region').value.trim();
+  const diag=document.getElementById('eco-diagnostico').value.trim();
+  const informanteRaw=document.getElementById('eco-informante').value;
+  const informante=informanteRaw.split('|')[0]||informanteRaw;
+  const preview=document.getElementById('eco-preview');
+  if(!nombre&&!hallazgos){preview.textContent='Completar los campos para generar la vista previa...';preview.classList.remove('has-content');return}
+  const fecha=document.getElementById('eco-fecha').value;
+  const fechaStr=fecha?new Date(fecha+'T12:00').toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'}):'—';
+  let txt=`INFORME ECOGRÁFICO — ${tipo||'—'}\nFecha: ${fechaStr}\n\nPACIENTE: ${nombre||'—'} | RUT: ${document.getElementById('eco-rut').value.trim()||'—'} | ${document.getElementById('eco-edad').value||'—'} años, ${document.getElementById('eco-sexo').value||'—'}\n`;
+  if(region)txt+=`Región: ${region}\n`;
+  if(hallazgos)txt+=`\nHALLAZGOS\n${hallazgos}\n`;
+  if(diag)txt+=`\nIMPRESIÓN ECOGRÁFICA\n${diag}\n`;
+  if(informante)txt+=`\nMédico informante: ${informante}`;
+  preview.textContent=txt;
+  preview.classList.add('has-content');
+}
+
+function clearEcoForm(){
+  if(!confirm('¿Limpiar el formulario? Se perderán los datos no guardados.'))return;
+  ['eco-nombre','eco-rut','eco-edad','eco-fecha','eco-solicitante','eco-codigo','eco-region',
+   'eco-indicacion','eco-hallazgos','eco-diagnostico','eco-recomendaciones'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('eco-sexo').value='';
+  document.getElementById('eco-informante').value='';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  App.selectedTipo='';
+  updateEcoPreview();
+  showToast('Formulario limpiado','🔄');
+}
+
+function populatePDF(){
+  const nombre=document.getElementById('eco-nombre').value.trim()||'—';
+  const rut=document.getElementById('eco-rut').value.trim()||'—';
+  const edad=document.getElementById('eco-edad').value||'—';
+  const sexo=document.getElementById('eco-sexo').value||'—';
+  const fecha=document.getElementById('eco-fecha').value;
+  const codigo=document.getElementById('eco-codigo').value.trim()||'—';
+  const region=document.getElementById('eco-region').value.trim()||'—';
+  const indicacion=document.getElementById('eco-indicacion').value.trim();
+  const tipo=App.selectedTipo||'—';
+  const hallazgos=document.getElementById('eco-hallazgos').value.trim()||'—';
+  const diag=document.getElementById('eco-diagnostico').value.trim()||'—';
+  const rec=document.getElementById('eco-recomendaciones').value.trim();
+  const fechaStr=fecha?new Date(fecha+'T12:00').toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'}):new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Parse médico informante — format "Nombre|Cargo|Rut"
+  const informanteRaw=document.getElementById('eco-informante').value;
+  const parts=informanteRaw.split('|');
+  const infNombre=parts[0]||'—';
+  const infCargo=parts[1]||'MÉDICO INFORMANTE';
+  const infRut=parts[2]||'—';
+
+  // Populate
+  document.getElementById('pdf-tipo-header').textContent=`ECOGRAFÍA ${tipo.toUpperCase()}${region&&region!=='—'?': '+region.toUpperCase():''}`;
+  document.getElementById('pdf-pac-nombre').textContent=nombre;
+  document.getElementById('pdf-pac-edad').textContent=`${edad} años`;
+  document.getElementById('pdf-pac-rut').textContent=rut;
+  document.getElementById('pdf-pac-sexo').textContent=sexo;
+  document.getElementById('pdf-pac-fecha').textContent=fechaStr;
+  document.getElementById('pdf-pac-codigo').textContent=codigo;
+  document.getElementById('pdf-hallazgos-val').textContent=hallazgos;
+  document.getElementById('pdf-diag-val').textContent=diag;
+  document.getElementById('pdf-tecnica-val').textContent=`Con transductor de alta resolución se realiza barrido sonográfico en ${region!=='—'?region.toLowerCase():'la región indicada'}${indicacion?'. '+indicacion:''}`;
+
+  const recSec=document.getElementById('pdf-rec-section');
+  if(rec){document.getElementById('pdf-rec-val').textContent=rec;recSec.style.display='block'}
+  else recSec.style.display='none';
+
+  // Firma
+  document.getElementById('pdf-firma-nombre').textContent=infNombre;
+  document.getElementById('pdf-firma-cargo').textContent=infCargo;
+  document.getElementById('pdf-firma-rut').textContent=`Rut: ${infRut}`;
+  document.getElementById('pdf-codigo-bottom').textContent=`Código de examen: ${codigo} · Generado: ${new Date().toLocaleString('es-CL')}`;
+}
+
+function previewPDF(){populatePDF();showToast('Abriendo vista de impresión...','🖨️');setTimeout(()=>window.print(),400)}
+
+function saveEcoInforme(){
+  const nombre=document.getElementById('eco-nombre').value.trim();
+  const tipo=App.selectedTipo;
+  const hall=document.getElementById('eco-hallazgos').value.trim();
+  if(!nombre){showToast('Ingresa el nombre del paciente','⚠️');return}
+  if(!tipo){showToast('Selecciona el tipo de ecografía','⚠️');return}
+  if(!hall){showToast('Completa los hallazgos','⚠️');return}
+  const informe={id:Date.now(),nombre,tipo,region:document.getElementById('eco-region').value.trim(),
+    timestamp:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})};
+  App.informes.push(informe);
+  // Add to patients for reports
+  const rut=document.getElementById('eco-rut').value.trim();
+  if(!App.patients.find(p=>p.rut===rut)){
+    App.patients.push({id:Date.now()+1,nombre,rut,edad:document.getElementById('eco-edad').value,motivo:`Ecografía ${tipo}`,box:'eco',timestamp:informe.timestamp,date:new Date().toLocaleDateString('es-CL'),tipo:`Ecografía ${tipo}`,estado:'Fin de atención'});
+  }
+  updateDashboardStats();
+  addInformeToList(informe);
+  renderReportTable();
+  populatePDF();
+  setTimeout(()=>window.print(),300);
+  showToast(`Informe de ${nombre} guardado`,'✅');
+  setTimeout(()=>showEcoList(),500);
+}
+
+function addInformeToList(inf){
+  const list=document.getElementById('informes-list');
+  const item=document.createElement('div');
+  item.className='informe-item';
+  item.innerHTML=`<div class="ii-icon"><svg viewBox="0 0 24 24" style="stroke:var(--c0);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;width:16px;height:16px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="ii-info"><div class="ii-name">${inf.nombre}</div><div class="ii-meta">Ecografía ${inf.tipo} · ${inf.region||'—'} · ${inf.timestamp}</div></div><span class="ii-badge c">Completado</span>`;
+  list.prepend(item);
+}
+
+// ─── REPORTES ───────────────────────────────────────────
+function setPeriod(chip,period){
+  document.querySelectorAll('.rep-period-chip').forEach(c=>c.classList.remove('active'));
+  chip.classList.add('active');
+  App.currentPeriod=period;
+  renderReportTable();
+}
+
+function getReportData(){
+  const today=new Date().toLocaleDateString('es-CL');
+  if(App.currentPeriod==='dia')return App.patients.filter(p=>p.date===today);
+  // semana/mes — for demo return all
+  return App.patients;
+}
+
+function renderReportTable(){
+  const data=getReportData();
+  const tbody=document.getElementById('rep-tbody');
+  tbody.innerHTML=data.map(p=>{
+    const estado=p.estado==='Fin de atención'?'<span class="rep-estado fin">Fin de atención</span>':'<span class="rep-estado proceso">En proceso</span>';
+    return `<tr><td>${p.date||'—'}</td><td>${p.nombre.toUpperCase()}</td><td>${p.tipo||p.motivo||'—'}</td><td>${{eco:'Box Ecografía',enfermeria:'Box Enfermería',muestras:'Sala Muestras',atencion:'Atención Médica','':'—'}[p.box]||p.box}</td><td>${estado}</td></tr>`;
+  }).join('');
+  // Summary
+  const eco=data.filter(p=>p.box==='eco').length;
+  const muestras=data.filter(p=>p.box==='muestras').length;
+  const fin=data.filter(p=>p.estado==='Fin de atención').length;
+  document.getElementById('rs-total').textContent=data.length;
+  document.getElementById('rs-eco').textContent=eco;
+  document.getElementById('rs-muestras').textContent=muestras;
+  document.getElementById('rs-fin').textContent=fin;
+}
+
+function exportCSV(){
+  const data=getReportData();
+  const period={'dia':'Hoy','semana':'Esta semana','mes':'Este mes','custom':'Personalizado'}[App.currentPeriod];
+  const rows=[
+    [`Reporte ViñaMed — ${period}`,`Generado: ${new Date().toLocaleString('es-CL')}`],
+    [],
+    ['FECHA','PACIENTE','TIPO DE EXAMEN','BOX / SALA','ESTADO'],
+    ...data.map(p=>[
+      p.date||new Date().toLocaleDateString('es-CL'),
+      p.nombre.toUpperCase(),
+      p.tipo||p.motivo||'—',
+      {eco:'Box Ecografía',enfermeria:'Box Enfermería',muestras:'Sala Muestras',atencion:'Atención Médica','':'Sin asignar'}[p.box]||p.box,
+      p.estado||'—'
+    ])
+  ];
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const bom='\uFEFF'; // UTF-8 BOM for Excel compatibility
+  downloadFile(bom+csv,`vinamed_reporte_${new Date().toISOString().split('T')[0]}.csv`,'text/csv;charset=utf-8');
+  showToast('CSV descargado correctamente','✅');
+}
+
+function exportExcel(){
+  const data=getReportData();
+  const period={'dia':'Hoy','semana':'Esta semana','mes':'Este mes','custom':'Personalizado'}[App.currentPeriod];
+  // Build a proper HTML table that Excel can open
+  const rows=data.map(p=>`
+    <tr>
+      <td>${p.date||new Date().toLocaleDateString('es-CL')}</td>
+      <td>${p.nombre.toUpperCase()}</td>
+      <td>${p.tipo||p.motivo||'—'}</td>
+      <td>${{eco:'Box Ecografía',enfermeria:'Box Enfermería',muestras:'Sala Muestras',atencion:'Atención Médica','':'Sin asignar'}[p.box]||p.box}</td>
+      <td>${p.estado||'—'}</td>
+    </tr>`).join('');
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>Reporte ViñaMed</x:Name>
+<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+</head><body>
+<table border="1" style="font-family:Arial;font-size:11pt">
+<tr style="background:#0891b2;color:#fff;font-weight:bold">
+<td colspan="5" style="font-size:13pt">Reporte ViñaMed — ${period} · ${new Date().toLocaleDateString('es-CL')}</td></tr>
+<tr style="background:#e0f2fe;font-weight:bold">
+<td>FECHA</td><td>PACIENTE</td><td>TIPO DE EXAMEN</td><td>BOX / SALA</td><td>ESTADO</td>
+</tr>${rows}
+<tr style="background:#f0f4f8;font-weight:bold">
+<td colspan="4">Total exámenes:</td><td>${data.length}</td>
+</tr>
+</table></body></html>`;
+  downloadFile(html,`vinamed_reporte_${new Date().toISOString().split('T')[0]}.xls`,'application/vnd.ms-excel;charset=utf-8');
+  showToast('Excel descargado correctamente','📊');
+}
+
+function downloadFile(content,filename,type){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function printReporte(){
+  const data=getReportData();
+  const period={'dia':'Hoy','semana':'Esta semana','mes':'Este mes','custom':'Personalizado'}[App.currentPeriod];
+  const rows=data.map(p=>`<tr><td>${p.date||'—'}</td><td>${p.nombre.toUpperCase()}</td><td>${p.tipo||p.motivo||'—'}</td><td>${{eco:'Box Ecografía',enfermeria:'Box Enfermería',muestras:'Sala Muestras',atencion:'Atención Médica','':'—'}[p.box]||p.box}</td><td>${p.estado||'—'}</td></tr>`).join('');
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ViñaMed</title>
+<style>body{font-family:Arial,sans-serif;font-size:10pt;padding:1.5cm}h2{color:#0891b2}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:.35rem .6rem}th{background:#e0f2fe;font-weight:700}@page{size:A4;margin:1cm}</style>
+</head><body><h2>ViñaMed — Reporte ${period}</h2><p style="color:#666">Generado: ${new Date().toLocaleString('es-CL')}</p>
+<table><tr><th>Fecha</th><th>Paciente</th><th>Tipo de examen</th><th>Box / Sala</th><th>Estado</th></tr>${rows}</table>
+<p style="margin-top:1rem;color:#666">Total: ${data.length} atenciones</p>
+</body></html>`);
+  win.document.close();
+  win.print();
+}
+
+// ─── TOAST ──────────────────────────────────────────────
+let toastTimer;
+function showToast(msg,icon='✅'){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-icon').textContent=icon;
+  t.classList.add('show');
+  const bar=t.querySelector('.toast-bar');
+  bar.style.animation='none';bar.offsetHeight;bar.style.animation='';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ─── PWA ────────────────────────────────────────────────
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('installBanner').classList.add('visible')});
+function installPWA(){if(!deferredPrompt){showToast('Usa el menú del navegador para instalar','ℹ️');return}deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')showToast('¡ViñaMed instalada!','🎉');document.getElementById('installBanner').classList.remove('visible');deferredPrompt=null})}
+window.addEventListener('appinstalled',()=>{showToast('App instalada correctamente','🎉');document.getElementById('installBanner').classList.remove('visible')});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// ─── INIT ────────────────────────────────────────────────
+navigate('dashboard');
+updateDashboardStats();
+renderReportTable();
+</script>
+<script src="enhancements.js"></script>
+</body>
+</html>

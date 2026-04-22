@@ -1,0 +1,39 @@
+﻿{
+  "name": "ViñaMed - Portal Clínico",
+  "short_name": "ViñaMed",
+  "description": "Portal clínico ViñaMed para admisión, flujo de pacientes e informes ecográficos con persistencia local.",
+  "start_url": "./vinamed_app.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c1324",
+  "theme_color": "#0c1324",
+  "orientation": "any",
+  "lang": "es-CL",
+  "categories": ["medical", "health", "productivity"],
+  "icons": [
+    {
+      "src": "logo_vinamed.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo_vinamed.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nuevo paciente",
+      "short_name": "Paciente",
+      "url": "./vinamed_app.html#nuevo-paciente"
+    },
+    {
+      "name": "Informes ecográficos",
+      "short_name": "Informes",
+      "url": "./vinamed_app.html#eco"
+    }
+  ]
+}
