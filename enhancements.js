@@ -643,7 +643,7 @@
         e.target.style.borderColor = 'rgba(0,180,216,.16)';
         feedback.textContent = '';
         btn.disabled = true;
-      } else if (window.isValidRut(formatted)) {
+      } else if (isValidRut(formatted)) {
         e.target.style.borderColor = '#3dffa0';
         feedback.style.color = '#3dffa0';
         feedback.textContent = 'RUT Válido';

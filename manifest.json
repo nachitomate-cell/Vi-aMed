@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "ViñaMed - Portal Clínico",
   "short_name": "ViñaMed",
   "description": "Portal clínico ViñaMed para admisión, flujo de pacientes e informes ecográficos con persistencia local.",
@@ -12,13 +12,13 @@
   "categories": ["medical", "health", "productivity"],
   "icons": [
     {
-      "src": "logo_vinamed.png",
+      "src": "logo2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "logo_vinamed.png",
+      "src": "logo2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
