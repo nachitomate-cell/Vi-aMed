@@ -3,9 +3,9 @@
   const SESSION_KEY = 'vinamed-enhanced-session-v1';
   const TIMEOUT_MS = 10 * 60 * 1000;
   const USERS = {
-    'admision@vinamed.cl': { password: 'Demo1234', role: 'admision', name: 'Camila Soto' },
-    'medico@vinamed.cl': { password: 'Demo1234', role: 'medico', name: 'Dr. Martin Rojas' },
-    'direccion@vinamed.cl': { password: 'Demo1234', role: 'direccion', name: 'Paula Caceres' }
+    '11.111.111-1': { password: 'Demo1234', role: 'admision', name: 'Camila Soto', email: 'admision@vinamed.cl' },
+    '22.222.222-2': { password: 'Demo1234', role: 'medico', name: 'Dr. Martin Rojas', email: 'medico@vinamed.cl' },
+    '33.333.333-3': { password: 'Demo1234', role: 'direccion', name: 'Paula Caceres', email: 'direccion@vinamed.cl' }
   };
   const TOUR_KEY = 'vinamed-enhanced-tour-seen-v1';
   const STATUS_LABELS = { admitido: 'Admitido', espera: 'En espera', 'en-box': 'En box', borrador: 'Informe en borrador', validado: 'Informe validado', entregado: 'Informe entregado' };
@@ -516,19 +516,39 @@
           <div class="logo-text" style="margin-bottom:1rem"><span class="brand">ViñaMed</span><span class="sub">Portal Clínico reforzado</span></div>
           <h2 style="font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:.6rem">Control local más serio para una operación clínica</h2>
           <p class="vm-overlay-note">Esta capa agrega inicio de sesión por rol, cierre por inactividad, persistencia local, validación de RUT, auditoría y emisión controlada de informes. Sigue siendo una demo avanzada: para producción real aún falta backend, cifrado y firma electrónica.</p>
-          <div class="vm-login-note" style="margin-top:1rem">Credenciales demo:<br>admision@vinamed.cl / Demo1234<br>medico@vinamed.cl / Demo1234<br>direccion@vinamed.cl / Demo1234</div>
+          <div class="vm-login-note" style="margin-top:1rem">Credenciales demo:<br>11.111.111-1 / Demo1234 (Admisión)<br>22.222.222-2 / Demo1234 (Médico)<br>33.333.333-3 / Demo1234 (Dirección)</div>
         </section>
-        <section class="vm-login-form">
-          <div class="field"><label>Correo</label><input id="vmEmail" type="email" autocomplete="username"></div>
+        <section class="vm-login-form" id="loginFormSection">
+          <div class="field">
+            <label>RUT de Usuario</label>
+            <input id="rut-login" type="text" placeholder="Ej: 12.345.678-9" autocomplete="username">
+            <span id="rut-feedback" style="font-size:0.75rem; margin-top:4px; display:block; min-height:14px; font-weight:600;"></span>
+          </div>
           <div class="field"><label>Contraseña</label><input id="vmPassword" type="password" autocomplete="current-password"></div>
           <div class="field"><label>Rol esperado</label><select id="vmRole"><option value="admision">Admisión</option><option value="medico">Médico informante</option><option value="direccion">Dirección clínica</option></select></div>
           <div class="vm-inline-note">La sesión se cierra automáticamente tras 10 minutos sin actividad para proteger los datos del navegador.</div>
           <div id="vmLoginError" class="vm-error"></div>
-          <button class="btn btn-primary" id="vmLoginBtn" type="button">Entrar al portal</button>
+          <button class="btn btn-primary" id="vmLoginBtn" type="button" disabled>Entrar al portal</button>
+          <div style="text-align:center; margin-top:0.5rem;">
+            <a href="#" id="vmForgotPwdLink" style="color:#00b4d8; font-size:0.85rem; text-decoration:none;">¿Olvidaste tu contraseña?</a>
+          </div>
+        </section>
+        <section class="vm-login-form" id="recoveryFormSection" style="display:none;">
+          <h3 style="font-family:'Syne',sans-serif;font-size:1.4rem;margin-bottom:0.5rem;color:var(--text)">Recuperar Contraseña</h3>
+          <p class="vm-overlay-note" style="margin-bottom:1rem;">Ingresa el correo electrónico asociado a tu cuenta para enviarte un enlace de recuperación.</p>
+          <div class="field">
+            <label>Correo Electrónico</label>
+            <input id="vmRecoveryEmail" type="email" placeholder="ejemplo@vinamed.cl">
+          </div>
+          <div id="vmRecoveryMsg" style="font-size:0.85rem; margin-top:4px; display:block; min-height:14px; font-weight:600;"></div>
+          <button class="btn btn-primary" id="vmSendRecoveryBtn" type="button" style="margin-top:1rem;">Enviar enlace</button>
+          <div style="text-align:center; margin-top:1rem;">
+            <a href="#" id="vmBackToLoginLink" style="color:#aebbd0; font-size:0.85rem; text-decoration:none;">Volver al inicio de sesión</a>
+          </div>
         </section>
       </div>`;
     document.body.appendChild(div);
-    document.getElementById('vmEmail').value = 'admision@vinamed.cl';
+    document.getElementById('rut-login').value = '';
     document.getElementById('vmPassword').value = 'Demo1234';
   }
 
@@ -539,16 +559,16 @@
   }
 
   function login() {
-    const email = document.getElementById('vmEmail').value.trim().toLowerCase();
+    const rut = document.getElementById('rut-login').value.trim();
     const password = document.getElementById('vmPassword').value;
     const role = document.getElementById('vmRole').value;
     const error = document.getElementById('vmLoginError');
-    const user = USERS[email];
+    const user = USERS[rut];
     if (!user || user.password !== password || user.role !== role) {
       error.textContent = 'Credenciales inválidas para este rol.';
       return;
     }
-    window.vmSession = { ...user, email, roleLabel: role === 'admision' ? 'Admisión' : role === 'medico' ? 'Médico' : 'Dirección clínica', lastActivity: Date.now() };
+    window.vmSession = { ...user, rut, roleLabel: role === 'admision' ? 'Admisión' : role === 'medico' ? 'Médico' : 'Dirección clínica', lastActivity: Date.now() };
     saveSession(window.vmSession);
     document.getElementById('vmLogin').classList.remove('open');
     addAudit('Inicio de sesión', `${user.name} ingresó con perfil ${window.vmSession.roleLabel}.`);
@@ -603,6 +623,70 @@
 
   function bindEnhancements() {
     document.getElementById('vmLoginBtn')?.addEventListener('click', login);
+    
+    document.getElementById('rut-login')?.addEventListener('input', function(e) {
+      let raw = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
+      let formatted = '';
+      if (raw.length > 1) {
+        let body = raw.slice(0, -1);
+        let dv = raw.slice(-1);
+        formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + dv;
+      } else {
+        formatted = raw;
+      }
+      e.target.value = formatted;
+      
+      const feedback = document.getElementById('rut-feedback');
+      const btn = document.getElementById('vmLoginBtn');
+      
+      if (raw.length < 8) {
+        e.target.style.borderColor = 'rgba(0,180,216,.16)';
+        feedback.textContent = '';
+        btn.disabled = true;
+      } else if (window.isValidRut(formatted)) {
+        e.target.style.borderColor = '#3dffa0';
+        feedback.style.color = '#3dffa0';
+        feedback.textContent = 'RUT Válido';
+        btn.disabled = false;
+      } else {
+        e.target.style.borderColor = '#ffb4c0';
+        feedback.style.color = '#ffb4c0';
+        feedback.textContent = 'RUT Inválido';
+        btn.disabled = true;
+      }
+    });
+
+    document.getElementById('vmForgotPwdLink')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('loginFormSection').style.display = 'none';
+      document.getElementById('recoveryFormSection').style.display = 'grid';
+      document.getElementById('vmRecoveryMsg').textContent = '';
+      document.getElementById('vmRecoveryEmail').value = '';
+      document.getElementById('vmRecoveryEmail').style.display = 'block';
+      document.getElementById('vmSendRecoveryBtn').style.display = 'block';
+    });
+
+    document.getElementById('vmBackToLoginLink')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('recoveryFormSection').style.display = 'none';
+      document.getElementById('loginFormSection').style.display = 'grid';
+    });
+
+    document.getElementById('vmSendRecoveryBtn')?.addEventListener('click', function() {
+      const email = document.getElementById('vmRecoveryEmail').value.trim();
+      const msg = document.getElementById('vmRecoveryMsg');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(email)) {
+        msg.style.color = '#3dffa0';
+        msg.textContent = 'Si el correo existe en nuestra base de datos, hemos enviado un enlace de recuperación.';
+        document.getElementById('vmRecoveryEmail').style.display = 'none';
+        this.style.display = 'none';
+      } else {
+        msg.style.color = '#ffb4c0';
+        msg.textContent = 'Por favor, ingresa un correo válido.';
+      }
+    });
+
     document.getElementById('vmTourLaunch')?.addEventListener('click', () => openTour(0));
     document.getElementById('logoutBtn')?.addEventListener('click', () => setTimeout(() => logout('Sesión cerrada manualmente.'), 0));
     document.getElementById('vmPrintBtn')?.addEventListener('click', () => {
