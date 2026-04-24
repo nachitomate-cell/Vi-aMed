@@ -329,9 +329,39 @@ main{padding-top:var(--header-h);min-height:100vh;transition:margin-left var(--t
   #pdf-informe{display:block!important}
   @page{size:A4;margin:0}
 }
+/* ═══════════ SPLASH SCREEN ═══════════ */
+#splash-screen{position:fixed;inset:0;background:#000000;z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .6s var(--ease)}
+#splash-screen.fade-out{opacity:0;pointer-events:none}
+#splash-video{width:100%;height:100%;object-fit:cover;object-position:center}
+#splash-skip-btn{position:absolute;top:1.5rem;right:1.5rem;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:.6rem 1.2rem;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;z-index:10000;backdrop-filter:blur(4px);transition:background .2s}
+#splash-skip-btn:hover{background:rgba(255,255,255,.25)}
 </style>
 </head>
 <body>
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+  <video id="splash-video" src="presentacion.mp4" autoplay muted playsinline></video>
+  <button id="splash-skip-btn">Saltar</button>
+</div>
+<script>
+  if (sessionStorage.getItem('vinamed_splash_shown')) {
+    document.getElementById('splash-screen').style.display = 'none';
+  } else {
+    sessionStorage.setItem('vinamed_splash_shown', 'true');
+    const splashScreen = document.getElementById('splash-screen');
+    const splashVideo = document.getElementById('splash-video');
+    const skipBtn = document.getElementById('splash-skip-btn');
+    const hideSplash = () => {
+      splashScreen.classList.add('fade-out');
+      setTimeout(() => { splashScreen.style.display = 'none'; }, 600);
+    };
+    splashVideo.addEventListener('ended', hideSplash);
+    skipBtn.addEventListener('click', () => {
+      splashVideo.pause();
+      hideSplash();
+    });
+  }
+</script>
 
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
@@ -541,15 +571,15 @@ main{padding-top:var(--header-h);min-height:100vh;transition:margin-left var(--t
         <div class="field">
           <label>Seleccionar tipo *</label>
           <div class="chip-group" id="chip-group">
-            <div class="chip" onclick="selectChip(this,'Abdominal')">Abdominal</div>
-            <div class="chip" onclick="selectChip(this,'Pélvico')">Pélvico</div>
-            <div class="chip" onclick="selectChip(this,'Partes Blandas')">Partes Blandas</div>
-            <div class="chip" onclick="selectChip(this,'Articular')">Articular</div>
-            <div class="chip" onclick="selectChip(this,'Musculotendinoso')">Musculotendinoso</div>
-            <div class="chip" onclick="selectChip(this,'Cervical / Tiroideo')">Cervical / Tiroideo</div>
-            <div class="chip" onclick="selectChip(this,'Obstétrico')">Obstétrico</div>
-            <div class="chip" onclick="selectChip(this,'Doppler Vascular')">Doppler Vascular</div>
-            <div class="chip" onclick="selectChip(this,'Otro')">Otro</div>
+            <div class="chip" data-tipo="Abdominal" onclick="selectChip(this,'Abdominal')">Abdominal</div>
+            <div class="chip" data-tipo="Pélvico" onclick="selectChip(this,'Pélvico')">Pélvico</div>
+            <div class="chip" data-tipo="Partes Blandas" onclick="selectChip(this,'Partes Blandas')">Partes Blandas</div>
+            <div class="chip" data-tipo="Articular" onclick="selectChip(this,'Articular')">Articular</div>
+            <div class="chip" data-tipo="Musculotendinoso" onclick="selectChip(this,'Musculotendinoso')">Musculotendinoso</div>
+            <div class="chip" data-tipo="Cervical / Tiroideo" onclick="selectChip(this,'Cervical / Tiroideo')">Cervical / Tiroideo</div>
+            <div class="chip" data-tipo="Obstétrico" onclick="selectChip(this,'Obstétrico')">Obstétrico</div>
+            <div class="chip" data-tipo="Doppler Vascular" onclick="selectChip(this,'Doppler Vascular')">Doppler Vascular</div>
+            <div class="chip" data-tipo="Otro" onclick="selectChip(this,'Otro')">Otro</div>
           </div>
         </div>
         <div class="field"><label>Región anatómica / detalle</label><input id="eco-region" type="text" placeholder="Ej: Codo izquierdo, hígado, tiroides..."></div>
@@ -1191,7 +1221,9 @@ function addMuestraToList(m){
 function openEcoForm(){
   document.getElementById('eco-form-wrap').style.display='block';
   document.getElementById('eco-list-wrap').style.display='none';
-  document.getElementById('eco-fecha').value=new Date().toISOString().split('T')[0];
+  // Only set today's date if the field is empty (preserves draft restoration)
+  const fechaEl=document.getElementById('eco-fecha');
+  if(fechaEl&&!fechaEl.value) fechaEl.value=new Date().toISOString().split('T')[0];
 }
 function showEcoList(){
   document.getElementById('eco-form-wrap').style.display='none';
@@ -1231,11 +1263,18 @@ function updateEcoPreview(){
 function clearEcoForm(){
   if(!confirm('¿Limpiar el formulario? Se perderán los datos no guardados.'))return;
   ['eco-nombre','eco-rut','eco-edad','eco-fecha','eco-solicitante','eco-codigo','eco-region',
-   'eco-indicacion','eco-hallazgos','eco-diagnostico','eco-recomendaciones'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+   'eco-indicacion','eco-hallazgos','eco-diagnostico','eco-recomendaciones'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.disabled=false}});
   document.getElementById('eco-sexo').value='';
+  document.getElementById('eco-sexo').disabled=false;
   document.getElementById('eco-informante').value='';
+  document.getElementById('eco-informante').disabled=false;
+  // Clear injected fields from enhancements.js
+  const firma=document.getElementById('eco-firma');if(firma){firma.value='';firma.disabled=false}
+  const estado=document.getElementById('eco-estado');if(estado){estado.value='borrador';estado.disabled=false}
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
   App.selectedTipo='';
+  // Clear localStorage draft
+  try{localStorage.removeItem('borrador_eco_actual')}catch(e){}
   updateEcoPreview();
   showToast('Formulario limpiado','🔄');
 }
