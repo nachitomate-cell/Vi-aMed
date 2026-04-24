@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const STORAGE_KEY = 'vinamed-enhanced-state-v1';
   const SESSION_KEY = 'vinamed-enhanced-session-v1';
   const TIMEOUT_MS = 10 * 60 * 1000;
@@ -19,6 +19,72 @@
     ['bÃºsqueda', 'búsqueda'], ['clÃ­nicos', 'clínicos'], ['crÃ­tico', 'crítico'], ['instalada correctamente', 'instalada correctamente'], ['Â¡', '¡'], ['â€”', '—'], ['Â·', '·'],
     ['ðŸ”´', '🔴'], ['ðŸŸ¢', '🟢'], ['âš ï¸', '⚠️'], ['âœ…', '✅'], ['ðŸ”„', '🔄'], ['ðŸ–¨ï¸', '🖨️'], ['â„¹ï¸', 'ℹ️'], ['ðŸŽ‰', '🎉'], ['ðŸ“‹', '📋'], ['ðŸ“²', '📲']
   ]);
+
+
+  const MACROS_ECO = {
+    'Abdominal': 'Hígado de tamaño, forma y ecogenicidad normal. Vesícula biliar alitiásica de paredes finas. Vías biliares intra y extrahepáticas de calibre conservado. Páncreas y bazo sin alteraciones. Ambos riñones de tamaño y morfología conservados, sin signos de uropatía obstructiva. Vejiga a repleción parcial, de paredes finas.',
+    'Pélvico': 'Vejiga de buena repleción, de paredes finas, sin imágenes en su lumen. Útero en AVF, de tamaño y ecogenicidad conservada. Endometrio central y homogéneo. Ambos ovarios de volumen y aspecto ecográfico habitual. Ausencia de líquido libre en fondo de saco de Douglas.',
+    'Partes Blandas': 'Se explora región de interés. Piel y tejido celular subcutáneo de grosor y ecogenicidad conservados. No se observan colecciones ni masas sólidas subyacentes. Planos musculares de estructura fibrilar normal. Ausencia de adenopatías o hipervascularización al modo Doppler color.'
+  };
+
+  const ECO_DRAFT_KEY = 'borrador_eco_actual';
+  const ECO_FIELDS = ['eco-nombre', 'eco-rut', 'eco-edad', 'eco-sexo', 'eco-fecha', 'eco-solicitante', 'eco-codigo', 'eco-region', 'eco-indicacion', 'eco-informante', 'eco-firma', 'eco-hallazgos', 'eco-diagnostico', 'eco-recomendaciones', 'eco-estado'];
+
+  function saveBorradorLocally() {
+    const data = {};
+    ECO_FIELDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) data[id] = el.value;
+    });
+    const activeChip = document.querySelector('#chip-group .chip.selected');
+    data['selected_tipo'] = activeChip ? activeChip.getAttribute('data-tipo') : '';
+    localStorage.setItem(ECO_DRAFT_KEY, JSON.stringify(data));
+  }
+
+  function loadBorradorLocally() {
+    try {
+      const raw = localStorage.getItem(ECO_DRAFT_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      ECO_FIELDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && data[id] !== undefined) el.value = data[id];
+      });
+      if (data['selected_tipo']) {
+        const chip = document.querySelector(`#chip-group .chip[data-tipo="${data['selected_tipo']}"]`);
+        if (chip && typeof window.selectChip === 'function') {
+          window.selectChip(chip, data['selected_tipo']);
+        }
+      }
+      handleLegalLock();
+      if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+    } catch (e) {}
+  }
+
+  function handleLegalLock() {
+    const estado = document.getElementById('eco-estado')?.value || 'borrador';
+    const isLocked = estado === 'validado';
+    const fieldsToLock = document.querySelectorAll('#eco-form-wrap input, #eco-form-wrap textarea, #eco-form-wrap select');
+    
+    fieldsToLock.forEach(el => {
+      if (el.id !== 'eco-estado') {
+        el.disabled = isLocked;
+      }
+    });
+
+    const chipGroup = document.getElementById('chip-group');
+    if (chipGroup) {
+      chipGroup.style.pointerEvents = isLocked ? 'none' : 'auto';
+      chipGroup.style.opacity = isLocked ? '0.6' : '1';
+    }
+
+    const printBtn = document.getElementById('vmPrintBtn');
+    if (printBtn) {
+      printBtn.disabled = !isLocked;
+      printBtn.style.opacity = isLocked ? '1' : '0.5';
+      printBtn.style.pointerEvents = isLocked ? 'auto' : 'none';
+    }
+  }
 
   function replaceMojibakeInNode(node) {
     if (!node || !node.nodeValue) return;
@@ -116,6 +182,16 @@
       .vm-tour-anchor{display:flex;align-items:center;gap:.45rem;margin-top:.75rem;color:#57e2ab;font-size:.78rem;font-weight:600}
       .vm-tour-anchor:before{content:'';width:.55rem;height:.55rem;border-radius:999px;background:#57e2ab;box-shadow:0 0 0 6px rgba(87,226,171,.12)}
       @media(max-width:900px){.vm-login-card{grid-template-columns:1fr}.vm-grid-2{grid-template-columns:1fr}}
+      
+      /* Print styles are handled by the #pdf-informe @media print block in index.html */
+      .eco-form-locked input:disabled, .eco-form-locked textarea:disabled, .eco-form-locked select:disabled {
+        opacity: .55; cursor: not-allowed;
+      }
+      #eco-form-wrap .vm-lock-indicator {
+        display:none; padding:.5rem .8rem; border-radius:8px; font-size:.78rem; font-weight:600;
+        background:rgba(61,255,160,.08); border:1px solid rgba(61,255,160,.18); color:#3dffa0; margin-bottom:.75rem;
+      }
+      #eco-form-wrap .vm-lock-indicator.visible { display:flex; align-items:center; gap:.5rem; }
     `;
     document.head.appendChild(style);
   }
@@ -543,11 +619,47 @@
       if (!window.vmSession) return;
       if (Date.now() - (window.vmSession.lastActivity || 0) > TIMEOUT_MS) logout('Cierre automático por inactividad para proteger los datos clínicos.');
     }, 30000);
+
+    // Tarea 1: Macros
+    document.getElementById('chip-group')?.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      const tipo = chip.getAttribute('data-tipo');
+      if (tipo && MACROS_ECO[tipo]) {
+        const hallazgos = document.getElementById('eco-hallazgos');
+        if (hallazgos && hallazgos.value.trim() === '') {
+          hallazgos.value = MACROS_ECO[tipo];
+          if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+          saveBorradorLocally();
+        }
+      }
+    });
+
+    // Tarea 2 y 4: Auto-guardado y Actualización en tiempo real
+    const ecoForm = document.getElementById('eco-form-wrap');
+    if (ecoForm) {
+      ecoForm.addEventListener('input', () => {
+        if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+        saveBorradorLocally();
+      });
+      ecoForm.addEventListener('change', () => {
+        if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+        saveBorradorLocally();
+      });
+    }
+
+    // Tarea 3: Legal Lock logic listener
+    document.getElementById('eco-estado')?.addEventListener('change', handleLegalLock);
   }
   const originalShowToast = window.showToast;
   window.showToast = function(msg, icon) {
     fixText();
-    if (typeof originalShowToast === 'function') return originalShowToast(normalizeString(msg), normalizeString(icon));
+    if (typeof originalShowToast === 'function') {
+      // The inline showToast accepts (msg, icon) — 2 params only
+      const safeMsg = normalizeString(String(msg || ''));
+      const safeIcon = normalizeString(String(icon || '✅'));
+      return originalShowToast(safeMsg, safeIcon);
+    }
   };
 
   const originalToggleBox = window.toggleBox;
@@ -602,47 +714,56 @@
     originalPopulatePDF();
     const firma = document.getElementById('eco-firma')?.value.trim() || 'Pendiente';
     const estado = reportState();
-    const stamp = document.getElementById('pdf-timestamp');
-    if (stamp) stamp.textContent = `${new Date().toLocaleString('es-CL')} · Estado: ${STATUS_LABELS[estado] || estado} · Firma: ${firma}`;
+    // Append estado + firma to the existing bottom code line
+    const codeBottom = document.getElementById('pdf-codigo-bottom');
+    if (codeBottom) {
+      codeBottom.textContent += ` · Estado: ${STATUS_LABELS[estado] || estado} · Firma: ${firma}`;
+    }
   };
 
   window.updateEcoPreview = function() {
-    const nombre = document.getElementById('eco-nombre').value.trim();
-    const rut = document.getElementById('eco-rut').value.trim();
-    const edad = document.getElementById('eco-edad').value;
-    const sexo = document.getElementById('eco-sexo').value;
-    const fecha = document.getElementById('eco-fecha').value;
+    const nombre = document.getElementById('eco-nombre')?.value.trim() || '';
+    const rut = document.getElementById('eco-rut')?.value.trim() || '';
+    const edad = document.getElementById('eco-edad')?.value || '';
+    const sexo = document.getElementById('eco-sexo')?.value || '';
+    const fecha = document.getElementById('eco-fecha')?.value || '';
     const tipo = App.selectedTipo;
-    const region = document.getElementById('eco-region').value.trim();
-    const indic = document.getElementById('eco-indicacion').value.trim();
-    const hall = document.getElementById('eco-hallazgos').value.trim();
-    const diag = document.getElementById('eco-diagnostico').value.trim();
-    const rec = document.getElementById('eco-recomendaciones').value.trim();
-    const informante = document.getElementById('eco-informante').value;
+    const region = document.getElementById('eco-region')?.value.trim() || '';
+    const indic = document.getElementById('eco-indicacion')?.value.trim() || '';
+    const hall = document.getElementById('eco-hallazgos')?.value.trim() || '';
+    const diag = document.getElementById('eco-diagnostico')?.value.trim() || '';
+    const rec = document.getElementById('eco-recomendaciones')?.value.trim() || '';
+    const informanteRaw = document.getElementById('eco-informante')?.value || '';
+    const informante = informanteRaw.split('|')[0] || informanteRaw;
     const firma = document.getElementById('eco-firma')?.value.trim() || 'Pendiente';
     const estado = reportState();
     const preview = document.getElementById('eco-preview');
     if (!preview) return;
+    if (!nombre && !hall && !tipo) {
+      preview.textContent = 'Completar los campos para generar la vista previa...';
+      preview.classList.remove('has-content');
+      return;
+    }
     const fechaStr = fecha ? new Date(fecha + 'T12:00').toLocaleDateString('es-CL',{ day:'2-digit', month:'long', year:'numeric' }) : 'Pendiente';
     const text = [
-      `INFORME ECOGRAFICO - ${tipo || 'Sin tipo'}`,
+      `INFORME ECOGRÁFICO — ${tipo || 'Sin tipo'}`,
       `Estado del documento: ${STATUS_LABELS[estado] || estado}`,
       `Fecha del examen: ${fechaStr}`,
       '',
-      `Paciente: ${nombre || 'Pendiente'} | RUT: ${rut || 'Pendiente'} | Edad: ${edad || '-'} anos | Sexo: ${sexo || '-'}`,
-      `Region: ${region || 'Sin region'}`,
-      `Indicacion clinica: ${indic || 'Pendiente'}`,
+      `Paciente: ${nombre || 'Pendiente'} | RUT: ${rut || 'Pendiente'} | Edad: ${edad || '-'} años | Sexo: ${sexo || '-'}`,
+      region ? `Región: ${region}` : '',
+      indic ? `Indicación clínica: ${indic}` : '',
       '',
       'HALLAZGOS',
       hall || 'Completar hallazgos.',
       '',
-      'IMPRESION DIAGNOSTICA',
-      diag || 'Completar impresion diagnostica.',
+      'IMPRESIÓN ECOGRÁFICA',
+      diag || 'Completar impresión diagnóstica.',
       '',
-      `Medico informante: ${informante || 'Pendiente'}`,
-      `Firma / codigo: ${firma}`,
-      rec ? `Recomendaciones: ${rec}` : ''
-    ].filter(Boolean).join('\n');
+      informante ? `Médico informante: ${informante}` : '',
+      `Firma / código: ${firma}`,
+      rec ? `\nRecomendaciones: ${rec}` : ''
+    ].filter(l => l !== '').join('\n');
     preview.textContent = text;
     preview.classList.add('has-content');
   };
@@ -698,6 +819,7 @@
     updateEcoPreview();
     updateDashboardStats();
     addAudit('Aplicación reforzada', 'Se activó la capa de seguridad, persistencia y auditoría local.');
+    loadBorradorLocally(); // Tarea 2: Cargar borrador al inicio
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
