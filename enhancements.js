@@ -2,11 +2,7 @@
   const STORAGE_KEY = 'vinamed-enhanced-state-v1';
   const SESSION_KEY = 'vinamed-enhanced-session-v1';
   const TIMEOUT_MS = 10 * 60 * 1000;
-  const USERS = {
-    '11.111.111-1': { password: 'Demo1234', role: 'admision', name: 'Camila Soto', email: 'admision@vinamed.cl' },
-    '22.222.222-2': { password: 'Demo1234', role: 'medico', name: 'Dr. Martin Rojas', email: 'medico@vinamed.cl' },
-    '33.333.333-3': { password: 'Demo1234', role: 'direccion', name: 'Paula Caceres', email: 'direccion@vinamed.cl' }
-  };
+
   const TOUR_KEY = 'vinamed-enhanced-tour-seen-v1';
   const STATUS_LABELS = { admitido: 'Admitido', espera: 'En espera', 'en-box': 'En box', borrador: 'Informe en borrador', validado: 'Informe validado', entregado: 'Informe entregado' };
   const FIXES = new Map([
@@ -57,15 +53,15 @@
         }
       }
       handleLegalLock();
-      if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
-    } catch (e) {}
+      if (typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+    } catch (e) { }
   }
 
   function handleLegalLock() {
     const estado = document.getElementById('eco-estado')?.value || 'borrador';
     const isLocked = estado === 'validado';
     const fieldsToLock = document.querySelectorAll('#eco-form-wrap input, #eco-form-wrap textarea, #eco-form-wrap select');
-    
+
     fieldsToLock.forEach(el => {
       if (el.id !== 'eco-estado') {
         el.disabled = isLocked;
@@ -182,6 +178,60 @@
       .vm-tour-anchor{display:flex;align-items:center;gap:.45rem;margin-top:.75rem;color:#57e2ab;font-size:.78rem;font-weight:600}
       .vm-tour-anchor:before{content:'';width:.55rem;height:.55rem;border-radius:999px;background:#57e2ab;box-shadow:0 0 0 6px rgba(87,226,171,.12)}
       @media(max-width:900px){.vm-login-card{grid-template-columns:1fr}.vm-grid-2{grid-template-columns:1fr}}
+      .vm-report-viewer{position:fixed;inset:0;z-index:540;display:none;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.5);backdrop-filter:blur(6px)}
+      .vm-report-viewer.open{display:flex}
+      .vm-report-shell{position:relative;width:min(1120px,100%);max-height:calc(100vh - 2rem);display:flex;flex-direction:column}
+      .vm-report-close{position:absolute;top:1rem;right:1rem;z-index:3;width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.7);background:rgba(255,255,255,.92);color:#4b5563;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 12px 30px rgba(0,0,0,.22)}
+      .vm-report-close svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+      .vm-report-scroll{overflow-y:auto;border-radius:24px}
+      .vm-report-paper{width:min(860px,100%);margin:0 auto;background:#fff;color:#1f2937;border-radius:24px;box-shadow:0 25px 70px rgba(0,0,0,.28)}
+      .vm-report-paper-inner{min-height:1120px;padding:2.2rem 2.5rem 2.6rem}
+      .vm-report-header{display:flex;justify-content:space-between;gap:1.25rem;align-items:flex-start;padding-bottom:1.4rem;border-bottom:1px solid #e5e7eb}
+      .vm-report-brand{font-size:1.15rem;font-weight:700;color:#111827;letter-spacing:-.02em}
+      .vm-report-sub{margin-top:.35rem;font-size:.92rem;color:#6b7280}
+      .vm-report-meta{font-size:.92rem;color:#4b5563;line-height:1.65;text-align:right}
+      .vm-report-meta strong{color:#111827}
+      .vm-report-patient{margin-top:2rem;padding:1.25rem;border:1px solid #e5e7eb;border-radius:20px;background:#f9fafb}
+      .vm-report-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem}
+      .vm-report-field-label{margin-bottom:.45rem;font-size:.7rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6b7280}
+      .vm-report-field-value{font-size:.96rem;font-weight:600;color:#1f2937;line-height:1.5;word-break:break-word}
+      .vm-report-title{margin:2.5rem 0 2rem;text-align:center;font-size:1.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#111827}
+      .vm-report-section-title{margin-bottom:1rem;font-size:.8rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#6b7280}
+      .vm-report-body{font-size:1rem;line-height:1.95;color:#374151}
+      .vm-report-body p{margin-bottom:1rem;white-space:pre-wrap}
+      .vm-report-conclusion{margin-top:2.2rem;padding:1.25rem 1.35rem;border:1px solid #e0f2fe;border-radius:20px;background:rgba(240,249,255,.85)}
+      .vm-report-conclusion-inner{border-left:4px solid #0284c7;padding-left:1rem}
+      .vm-report-footer{margin-top:4rem;display:flex;justify-content:flex-end}
+      .vm-report-signature{width:min(320px,100%);text-align:center}
+      .vm-report-signature-space{height:76px}
+      .vm-report-signature-line{padding-top:1rem;border-top:1px solid #9ca3af}
+      .vm-report-signature-name{font-size:1rem;font-weight:700;color:#111827}
+      .vm-report-signature-role{margin-top:.35rem;font-size:.92rem;color:#4b5563}
+      .vm-report-signature-reg{margin-top:.35rem;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#6b7280}
+      .vm-report-actions{position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:541;display:flex;flex-wrap:wrap;justify-content:center;gap:.75rem;width:min(760px,calc(100vw - 2rem));padding:.85rem;border:1px solid rgba(255,255,255,.42);border-radius:22px;background:rgba(255,255,255,.92);box-shadow:0 25px 60px rgba(0,0,0,.24);backdrop-filter:blur(10px)}
+      .vm-report-btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;min-width:160px;padding:.9rem 1.15rem;border-radius:14px;border:1px solid transparent;font-size:.9rem;font-weight:700;cursor:pointer;transition:transform .18s ease,background-color .18s ease,border-color .18s ease,color .18s ease}
+      .vm-report-btn:hover{transform:translateY(-1px)}
+      .vm-report-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+      .vm-report-btn.primary{background:#111827;color:#fff}
+      .vm-report-btn.secondary{background:#fff;border-color:#d1d5db;color:#374151}
+      .vm-report-btn.danger{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+      .vm-report-empty{padding:1.2rem;border:1px dashed rgba(0,180,216,.2);border-radius:18px;background:rgba(255,255,255,.02);font-size:.82rem;color:#8ea0bb;text-align:center}
+      .informe-item{position:relative}
+      .informe-item button{font:inherit}
+      @media(max-width:960px){.vm-report-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.vm-report-paper-inner{padding:1.4rem 1.15rem 2rem}.vm-report-header{flex-direction:column}.vm-report-meta{text-align:left}.vm-report-title{font-size:1.15rem;letter-spacing:.12em}.vm-report-footer{justify-content:center}}
+      @media(max-width:560px){.vm-report-grid{grid-template-columns:1fr}.vm-report-shell{max-height:calc(100vh - 1rem)}.vm-report-actions{bottom:.5rem;padding:.7rem}.vm-report-btn{min-width:100%;width:100%}}
+      @media print{
+        body.vm-report-printing>*:not(#vmReportViewerModal){display:none!important}
+        body.vm-report-printing #pdf-informe{display:none!important}
+        body.vm-report-printing #vmReportViewerModal{display:block!important;position:static!important;inset:auto!important;padding:0!important;background:transparent!important;backdrop-filter:none!important}
+        body.vm-report-printing #vmReportViewerModal .vm-report-shell,
+        body.vm-report-printing #vmReportViewerModal .vm-report-scroll{max-height:none!important;overflow:visible!important}
+        body.vm-report-printing #vmReportViewerModal .vm-report-paper{width:100%!important;max-width:none!important;margin:0!important;border-radius:0!important;box-shadow:none!important}
+        body.vm-report-printing #vmReportViewerModal .vm-report-paper-inner{min-height:auto!important;padding:0!important}
+        body.vm-report-printing #vmReportViewerModal .vm-report-close,
+        body.vm-report-printing #vmReportViewerModal .vm-report-actions{display:none!important}
+        @page{size:A4;margin:12mm}
+      }
       
       /* Print styles are handled by the #pdf-informe @media print block in index.html */
       .eco-form-locked input:disabled, .eco-form-locked textarea:disabled, .eco-form-locked select:disabled {
@@ -205,7 +255,7 @@
       if (Array.isArray(saved.informes)) App.informes = saved.informes;
       if (saved.boxStates) App.boxStates = saved.boxStates;
       App.audit = Array.isArray(saved.audit) ? saved.audit : [];
-    } catch {}
+    } catch { }
   }
   function savePersistedState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -291,12 +341,207 @@
       btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Imprimir validado';
       ecoActions.appendChild(btn);
     }
+    if (!document.getElementById('vmReportViewerModal')) {
+      const modal = document.createElement('div');
+      modal.id = 'vmReportViewerModal';
+      modal.className = 'vm-report-viewer';
+      modal.setAttribute('aria-hidden', 'true');
+      modal.innerHTML = `
+        <div class="vm-report-shell" role="dialog" aria-modal="true" aria-labelledby="vmReportViewerTitle" aria-describedby="vmReportViewerDescription">
+          <button class="vm-report-close" id="vmReportViewerClose" type="button" aria-label="Cerrar visor de informe">
+            <svg viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+          <div class="vm-report-scroll">
+            <article class="vm-report-paper">
+              <div class="vm-report-paper-inner" id="vmReportViewerPaper">
+                <header class="vm-report-header">
+                  <div>
+                    <div class="vm-report-brand">ViñaMed - Portal Clínico</div>
+                    <div class="vm-report-sub">Informe ecográfico emitido</div>
+                  </div>
+                  <div class="vm-report-meta">
+                    <div><strong>Fecha de emisión:</strong> <span id="vmReportIssueDate">--/--/----</span></div>
+                    <div><strong>Folio N°</strong> <span id="vmReportFolio">-----</span></div>
+                  </div>
+                </header>
+                <section class="vm-report-patient">
+                  <div class="vm-report-grid">
+                    <div><div class="vm-report-field-label">Nombre</div><div class="vm-report-field-value" id="vmReportPaciente">-</div></div>
+                    <div><div class="vm-report-field-label">RUT</div><div class="vm-report-field-value" id="vmReportRut">-</div></div>
+                    <div><div class="vm-report-field-label">Edad</div><div class="vm-report-field-value" id="vmReportEdad">-</div></div>
+                    <div><div class="vm-report-field-label">Previsión</div><div class="vm-report-field-value" id="vmReportPrevision">No registrada</div></div>
+                    <div><div class="vm-report-field-label">Fecha del examen</div><div class="vm-report-field-value" id="vmReportFechaExamen">-</div></div>
+                  </div>
+                </section>
+                <section>
+                  <h1 class="vm-report-title" id="vmReportViewerTitle">Informe Ecográfico</h1>
+                  <p id="vmReportViewerDescription" style="position:absolute;left:-9999px">Visualizador del informe clínico con hallazgos, conclusión y firma médica.</p>
+                </section>
+                <main>
+                  <section>
+                    <div class="vm-report-section-title">Hallazgos</div>
+                    <div class="vm-report-body" id="vmReportHallazgos"></div>
+                  </section>
+                  <section class="vm-report-conclusion">
+                    <div class="vm-report-conclusion-inner">
+                      <div class="vm-report-section-title" style="color:#0c4a6e">Conclusión</div>
+                      <div class="vm-report-body" id="vmReportConclusion"></div>
+                    </div>
+                  </section>
+                </main>
+                <footer class="vm-report-footer">
+                  <div class="vm-report-signature">
+                    <div class="vm-report-signature-space"></div>
+                    <div class="vm-report-signature-line">
+                      <div class="vm-report-signature-name" id="vmReportDoctorName">-</div>
+                      <div class="vm-report-signature-role" id="vmReportDoctorRole">-</div>
+                      <div class="vm-report-signature-reg" id="vmReportDoctorReg"></div>
+                    </div>
+                  </div>
+                </footer>
+              </div>
+            </article>
+          </div>
+        </div>
+        <div class="vm-report-actions">
+          <button class="vm-report-btn primary" id="vmReportPrintBtn" type="button">
+            <svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Imprimir
+          </button>
+          <button class="vm-report-btn secondary" id="vmReportDownloadBtn" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+            Descargar PDF
+          </button>
+          <button class="vm-report-btn danger" id="vmReportCloseAction" type="button">
+            <svg viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            Cerrar
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
   }
   function renderAudit() {
     const list = document.getElementById('vmAuditList');
     if (!list) return;
     const items = (App.audit || []).slice(0, 6);
     list.innerHTML = items.length ? items.map(item => `<div class="vm-audit-item"><strong>${item.action}</strong><div>${item.detail}</div><small>${item.actor} · ${new Date(item.ts).toLocaleString('es-CL')}</small></div>`).join('') : '<div class="vm-overlay-note">Aún no hay acciones auditadas en esta estación.</div>';
+  }
+
+  function formatDateForViewer(value, fallbackToday) {
+    if (!value) {
+      if (!fallbackToday) return 'No registrada';
+      return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+    }
+    const normalized = String(value).trim();
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? new Date(`${normalized}T12:00:00`) : new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) return normalized;
+    return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(parsed);
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function getMedicalReporterInfo(rawInformante, rawFirma) {
+    const fallbackName = window.vmSession?.role === 'medico' ? window.vmSession.name : 'Médico informante';
+    const base = String(rawInformante || '').trim();
+    if (!base) {
+      return { nombre: fallbackName, especialidad: 'Médico informante', registro: rawFirma || '' };
+    }
+    const parts = base.split('|').map(part => part.trim()).filter(Boolean);
+    return {
+      nombre: parts[0] || fallbackName,
+      especialidad: parts[1] || 'Médico informante',
+      registro: rawFirma || parts[2] || ''
+    };
+  }
+
+  function getPatientRecordForReport(report) {
+    if (!report) return null;
+    const byRut = report.rut ? App.patients.find(patient => String(patient.rut || '').trim() === String(report.rut).trim()) : null;
+    if (byRut) return byRut;
+    return App.patients.find(patient => String(patient.nombre || '').trim() === String(report.nombre || '').trim()) || null;
+  }
+
+  function getReportDataForViewer(report) {
+    const patient = getPatientRecordForReport(report);
+    const medico = getMedicalReporterInfo(report.informante, report.firma);
+    const hallazgos = String(report.hall || '').trim();
+    const conclusionParts = [String(report.diagnostico || '').trim(), String(report.recomendaciones || '').trim()].filter(Boolean);
+    return {
+      id: report.id,
+      paciente: report.nombre || patient?.nombre || 'Paciente sin nombre',
+      rut: report.rut || patient?.rut || 'No registrado',
+      edad: report.edad || patient?.edad || 'No registrada',
+      prevision: report.prevision || patient?.prevision || 'No registrada',
+      fechaExamen: report.fecha || patient?.date || '',
+      fechaEmision: report.fechaEmision || report.fecha || '',
+      tipoExamen: `Ecografía ${report.tipo || 'sin tipo'}`,
+      hallazgos: hallazgos ? hallazgos.split(/\n{2,}/).map(paragraph => paragraph.trim()).filter(Boolean) : ['Sin hallazgos registrados.'],
+      conclusion: conclusionParts.length ? conclusionParts : ['Sin conclusión registrada.'],
+      medicoInformante: medico
+    };
+  }
+
+  function setViewerParagraphs(container, paragraphs) {
+    if (!container) return;
+    const list = Array.isArray(paragraphs) ? paragraphs : [paragraphs];
+    container.innerHTML = list.map(text => `<p>${escapeHtml(normalizeString(String(text || '')))}</p>`).join('');
+  }
+
+  function closeReportViewer() {
+    const modal = document.getElementById('vmReportViewerModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('vm-report-open');
+  }
+
+  function openReportViewer(reportId) {
+    const report = App.informes.find(item => String(item.id) === String(reportId));
+    if (!report) {
+      showToast('Informe no encontrado', 'âš ï¸');
+      return;
+    }
+    const data = getReportDataForViewer(report);
+    document.getElementById('vmReportIssueDate').textContent = formatDateForViewer(data.fechaEmision, true);
+    document.getElementById('vmReportFolio').textContent = String(data.id);
+    document.getElementById('vmReportPaciente').textContent = normalizeString(String(data.paciente));
+    document.getElementById('vmReportRut').textContent = normalizeString(String(data.rut));
+    document.getElementById('vmReportEdad').textContent = normalizeString(String(data.edad));
+    document.getElementById('vmReportPrevision').textContent = normalizeString(String(data.prevision));
+    document.getElementById('vmReportFechaExamen').textContent = formatDateForViewer(data.fechaExamen, false);
+    document.getElementById('vmReportViewerTitle').textContent = normalizeString(String(data.tipoExamen));
+    document.getElementById('vmReportDoctorName').textContent = normalizeString(String(data.medicoInformante.nombre));
+    document.getElementById('vmReportDoctorRole').textContent = normalizeString(String(data.medicoInformante.especialidad));
+    document.getElementById('vmReportDoctorReg').textContent = data.medicoInformante.registro ? `Registro profesional: ${normalizeString(String(data.medicoInformante.registro))}` : '';
+    setViewerParagraphs(document.getElementById('vmReportHallazgos'), data.hallazgos);
+    setViewerParagraphs(document.getElementById('vmReportConclusion'), data.conclusion);
+    const modal = document.getElementById('vmReportViewerModal');
+    modal.dataset.reportId = String(report.id);
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('vm-report-open');
+  }
+
+  function renderInformesList() {
+    const list = document.getElementById('informes-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!Array.isArray(App.informes) || App.informes.length === 0) {
+      list.innerHTML = '<div class="vm-report-empty">Aún no hay informes guardados en este turno.</div>';
+      return;
+    }
+    [...App.informes].slice().reverse().forEach((inf) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'informe-item';
+      item.dataset.reportId = String(inf.id);
+      item.innerHTML = `<div class="ii-icon"><svg viewBox="0 0 24 24" style="stroke:var(--c0);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;width:16px;height:16px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div><div class="ii-info"><div class="ii-name">${escapeHtml(normalizeString(String(inf.nombre || 'Paciente sin nombre')))}</div><div class="ii-meta">${escapeHtml(normalizeString(`Ecografía ${inf.tipo || 'sin tipo'} · ${inf.region || 'Sin región'} · ${inf.timestamp || ''}`))}</div></div><span class="ii-badge c">${escapeHtml(normalizeString(STATUS_LABELS[inf.estado] || 'Completado'))}</span>`;
+      item.addEventListener('click', () => openReportViewer(inf.id));
+      list.appendChild(item);
+    });
   }
 
   function renderSessionUi() {
@@ -307,7 +552,7 @@
     const canSeeReports = !!window.vmSession && ['medico', 'direccion'].includes(window.vmSession.role);
     restricted.forEach(id => {
       const page = document.getElementById(id);
-      const nav = document.querySelector(`.nav-item[data-page="${id.replace('page-','')}"]`);
+      const nav = document.querySelector(`.nav-item[data-page="${id.replace('page-', '')}"]`);
       if (page) page.classList.toggle('vm-locked', !canSeeReports);
       if (nav) nav.classList.toggle('vm-locked', !canSeeReports);
     });
@@ -363,7 +608,7 @@
   let vmTourIndex = 0;
 
   function cleanupTourState() {
-    try { closePatientModal(); } catch {}
+    try { closePatientModal(); } catch { }
     const tour = document.getElementById('vmTour');
     tour?.classList.remove('open');
     document.querySelectorAll('.vm-tour-target').forEach((el) => el.classList.remove('vm-tour-target'));
@@ -506,85 +751,23 @@
   }
 
   function injectLogin() {
-    if (document.getElementById('vmLogin')) return;
-    const div = document.createElement('div');
-    div.id = 'vmLogin';
-    div.className = 'vm-login';
-    div.innerHTML = `
-      <div class="vm-login-card">
-        <section class="vm-login-hero">
-          <div class="logo-text" style="margin-bottom:1rem"><span class="brand">ViñaMed</span><span class="sub">Portal Clínico reforzado</span></div>
-          <h2 style="font-family:'Syne',sans-serif;font-size:2rem;margin-bottom:.6rem">Control local más serio para una operación clínica</h2>
-          <p class="vm-overlay-note">Esta capa agrega inicio de sesión por rol, cierre por inactividad, persistencia local, validación de RUT, auditoría y emisión controlada de informes. Sigue siendo una demo avanzada: para producción real aún falta backend, cifrado y firma electrónica.</p>
-          <div class="vm-login-note" style="margin-top:1rem">Credenciales demo:<br>11.111.111-1 / Demo1234 (Admisión)<br>22.222.222-2 / Demo1234 (Médico)<br>33.333.333-3 / Demo1234 (Dirección)</div>
-        </section>
-        <section class="vm-login-form" id="loginFormSection">
-          <div class="field">
-            <label>RUT de Usuario</label>
-            <input id="rut-login" type="text" placeholder="Ej: 12.345.678-9" autocomplete="username">
-            <span id="rut-feedback" style="font-size:0.75rem; margin-top:4px; display:block; min-height:14px; font-weight:600;"></span>
-          </div>
-          <div class="field"><label>Contraseña</label><input id="vmPassword" type="password" autocomplete="current-password"></div>
-          <div class="field"><label>Rol esperado</label><select id="vmRole"><option value="admision">Admisión</option><option value="medico">Médico informante</option><option value="direccion">Dirección clínica</option></select></div>
-          <div class="vm-inline-note">La sesión se cierra automáticamente tras 10 minutos sin actividad para proteger los datos del navegador.</div>
-          <div id="vmLoginError" class="vm-error"></div>
-          <button class="btn btn-primary" id="vmLoginBtn" type="button" disabled>Entrar al portal</button>
-          <div style="text-align:center; margin-top:0.5rem;">
-            <a href="#" id="vmForgotPwdLink" style="color:#00b4d8; font-size:0.85rem; text-decoration:none;">¿Olvidaste tu contraseña?</a>
-          </div>
-        </section>
-        <section class="vm-login-form" id="recoveryFormSection" style="display:none;">
-          <h3 style="font-family:'Syne',sans-serif;font-size:1.4rem;margin-bottom:0.5rem;color:var(--text)">Recuperar Contraseña</h3>
-          <p class="vm-overlay-note" style="margin-bottom:1rem;">Ingresa el correo electrónico asociado a tu cuenta para enviarte un enlace de recuperación.</p>
-          <div class="field">
-            <label>Correo Electrónico</label>
-            <input id="vmRecoveryEmail" type="email" placeholder="ejemplo@vinamed.cl">
-          </div>
-          <div id="vmRecoveryMsg" style="font-size:0.85rem; margin-top:4px; display:block; min-height:14px; font-weight:600;"></div>
-          <button class="btn btn-primary" id="vmSendRecoveryBtn" type="button" style="margin-top:1rem;">Enviar enlace</button>
-          <div style="text-align:center; margin-top:1rem;">
-            <a href="#" id="vmBackToLoginLink" style="color:#aebbd0; font-size:0.85rem; text-decoration:none;">Volver al inicio de sesión</a>
-          </div>
-        </section>
-      </div>`;
-    document.body.appendChild(div);
-    document.getElementById('rut-login').value = '';
-    document.getElementById('vmPassword').value = 'Demo1234';
+    // Login screen removed
   }
 
   function requireSession() {
-    injectLogin();
-    if (!window.vmSession) document.getElementById('vmLogin').classList.add('open');
+    // Auto-login to maintain functionality
+    if (!window.vmSession) {
+      window.vmSession = { role: 'medico', name: 'Dr. Usuario', rut: '00.000.000-0', roleLabel: 'Médico', lastActivity: Date.now() };
+    }
     renderSessionUi();
   }
 
   function login() {
-    const rut = document.getElementById('rut-login').value.trim();
-    const password = document.getElementById('vmPassword').value;
-    const role = document.getElementById('vmRole').value;
-    const error = document.getElementById('vmLoginError');
-    const user = USERS[rut];
-    if (!user || user.password !== password || user.role !== role) {
-      error.textContent = 'Credenciales inválidas para este rol.';
-      return;
-    }
-    window.vmSession = { ...user, rut, roleLabel: role === 'admision' ? 'Admisión' : role === 'medico' ? 'Médico' : 'Dirección clínica', lastActivity: Date.now() };
-    saveSession(window.vmSession);
-    document.getElementById('vmLogin').classList.remove('open');
-    addAudit('Inicio de sesión', `${user.name} ingresó con perfil ${window.vmSession.roleLabel}.`);
-    showToast('Sesión iniciada', user.name + ' ya puede trabajar en el portal', '🔐');
-    renderSessionUi();
-    if (!localStorage.getItem(TOUR_KEY)) {
-      setTimeout(() => openTour(0), 350);
-    }
+    // Obsolete
   }
 
   function logout(reason) {
-    window.vmSession = null;
-    sessionStorage.removeItem(SESSION_KEY);
-    document.getElementById('vmLogin').classList.add('open');
-    renderSessionUi();
-    showToast('Sesión cerrada', reason || 'Se cerró la sesión local.', '⏳');
+    // Obsolete
   }
 
   function setupAccessibility() {
@@ -623,8 +806,8 @@
 
   function bindEnhancements() {
     document.getElementById('vmLoginBtn')?.addEventListener('click', login);
-    
-    document.getElementById('rut-login')?.addEventListener('input', function(e) {
+
+    document.getElementById('rut-login')?.addEventListener('input', function (e) {
       let raw = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
       let formatted = '';
       if (raw.length > 1) {
@@ -635,10 +818,10 @@
         formatted = raw;
       }
       e.target.value = formatted;
-      
+
       const feedback = document.getElementById('rut-feedback');
       const btn = document.getElementById('vmLoginBtn');
-      
+
       if (raw.length < 8) {
         e.target.style.borderColor = 'rgba(0,180,216,.16)';
         feedback.textContent = '';
@@ -656,7 +839,7 @@
       }
     });
 
-    document.getElementById('vmForgotPwdLink')?.addEventListener('click', function(e) {
+    document.getElementById('vmForgotPwdLink')?.addEventListener('click', function (e) {
       e.preventDefault();
       document.getElementById('loginFormSection').style.display = 'none';
       document.getElementById('recoveryFormSection').style.display = 'grid';
@@ -666,13 +849,13 @@
       document.getElementById('vmSendRecoveryBtn').style.display = 'block';
     });
 
-    document.getElementById('vmBackToLoginLink')?.addEventListener('click', function(e) {
+    document.getElementById('vmBackToLoginLink')?.addEventListener('click', function (e) {
       e.preventDefault();
       document.getElementById('recoveryFormSection').style.display = 'none';
       document.getElementById('loginFormSection').style.display = 'grid';
     });
 
-    document.getElementById('vmSendRecoveryBtn')?.addEventListener('click', function() {
+    document.getElementById('vmSendRecoveryBtn')?.addEventListener('click', function () {
       const email = document.getElementById('vmRecoveryEmail').value.trim();
       const msg = document.getElementById('vmRecoveryMsg');
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -696,7 +879,7 @@
       addAudit('Preparación de impresión', `Informe listo para impresión de ${document.getElementById('eco-nombre').value || 'paciente sin nombre'}.`);
       setTimeout(() => window.print(), 250);
     });
-    ['click','keydown','mousemove','touchstart'].forEach(evt => document.addEventListener(evt, touchSession, { passive: true }));
+    ['click', 'keydown', 'mousemove', 'touchstart'].forEach(evt => document.addEventListener(evt, touchSession, { passive: true }));
     window.addEventListener('resize', refreshTourPosition);
     window.addEventListener('scroll', refreshTourPosition, true);
     setInterval(() => {
@@ -713,7 +896,7 @@
         const hallazgos = document.getElementById('eco-hallazgos');
         if (hallazgos && hallazgos.value.trim() === '') {
           hallazgos.value = MACROS_ECO[tipo];
-          if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+          if (typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
           saveBorradorLocally();
         }
       }
@@ -723,11 +906,11 @@
     const ecoForm = document.getElementById('eco-form-wrap');
     if (ecoForm) {
       ecoForm.addEventListener('input', () => {
-        if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+        if (typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
         saveBorradorLocally();
       });
       ecoForm.addEventListener('change', () => {
-        if(typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
+        if (typeof window.updateEcoPreview === 'function') window.updateEcoPreview();
         saveBorradorLocally();
       });
     }
@@ -736,7 +919,7 @@
     document.getElementById('eco-estado')?.addEventListener('change', handleLegalLock);
   }
   const originalShowToast = window.showToast;
-  window.showToast = function(msg, icon) {
+  window.showToast = function (msg, icon) {
     fixText();
     if (typeof originalShowToast === 'function') {
       // The inline showToast accepts (msg, icon) — 2 params only
@@ -747,7 +930,7 @@
   };
 
   const originalToggleBox = window.toggleBox;
-  window.toggleBox = function(boxId) {
+  window.toggleBox = function (boxId) {
     if (!window.vmSession) return requireSession();
     originalToggleBox(boxId);
     savePersistedState();
@@ -755,7 +938,7 @@
   };
 
   const originalSavePatient = window.savePatient;
-  window.savePatient = function() {
+  window.savePatient = function () {
     if (!window.vmSession) return requireSession();
     const error = document.getElementById('vmPatientError');
     if (error) error.textContent = '';
@@ -787,14 +970,14 @@
     }
   };
 
-  window.previewPDF = function() {
+  window.previewPDF = function () {
     if (!canUseReports()) return showToast('Acceso restringido', 'Solo médico o dirección pueden preparar informes.', '🔒');
     populatePDF();
     showToast('Vista previa lista', 'Revisa el formato. La impresión queda en el botón separado.', '🖨️');
   };
 
   const originalPopulatePDF = window.populatePDF;
-  window.populatePDF = function() {
+  window.populatePDF = function () {
     originalPopulatePDF();
     const firma = document.getElementById('eco-firma')?.value.trim() || 'Pendiente';
     const estado = reportState();
@@ -805,7 +988,7 @@
     }
   };
 
-  window.updateEcoPreview = function() {
+  window.updateEcoPreview = function () {
     const nombre = document.getElementById('eco-nombre')?.value.trim() || '';
     const rut = document.getElementById('eco-rut')?.value.trim() || '';
     const edad = document.getElementById('eco-edad')?.value || '';
@@ -828,7 +1011,7 @@
       preview.classList.remove('has-content');
       return;
     }
-    const fechaStr = fecha ? new Date(fecha + 'T12:00').toLocaleDateString('es-CL',{ day:'2-digit', month:'long', year:'numeric' }) : 'Pendiente';
+    const fechaStr = fecha ? new Date(fecha + 'T12:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Pendiente';
     const text = [
       `INFORME ECOGRÁFICO — ${tipo || 'Sin tipo'}`,
       `Estado del documento: ${STATUS_LABELS[estado] || estado}`,
@@ -853,7 +1036,7 @@
   };
 
   const originalSaveEcoInforme = window.saveEcoInforme;
-  window.saveEcoInforme = function() {
+  window.saveEcoInforme = function () {
     if (!canUseReports()) return showToast('Acceso restringido', 'Solo médico o dirección pueden guardar informes.', '🔒');
     const error = document.getElementById('vmEcoError');
     if (error) error.textContent = '';
@@ -874,7 +1057,7 @@
     }
     const before = App.informes.length;
     const previousPrint = window.print;
-    window.print = function() {};
+    window.print = function () { };
     originalSaveEcoInforme();
     window.print = previousPrint;
     if (App.informes.length > before) {

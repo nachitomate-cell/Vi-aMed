@@ -1,0 +1,45 @@
+/* ─── Tokens de diseño — ViñaMed Portal Clínico ──────────────────────────────
+   Sistema visual unificado con el Portal del Paciente y el nuevo login.
+   Importado en src/index.css
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Primario del sistema — reemplaza TODO azul */
+  --color-primary:        #0E7490;
+  --color-primary-dark:   #0C4A6E;
+  --color-primary-darker: #083344;
+  --color-primary-light:  rgba(14, 116, 144, 0.15);
+
+  /* Sidebar */
+  --sidebar-bg-top:       #0C4A6E;
+  --sidebar-bg-bot:       #083344;
+  --sidebar-active-bg:    rgba(255, 255, 255, 0.14);
+  --sidebar-active-text:  #FFFFFF;
+  --sidebar-text:         rgba(255, 255, 255, 0.65);
+  --sidebar-text-hover:   rgba(255, 255, 255, 0.90);
+  --sidebar-border:       rgba(255, 255, 255, 0.08);
+  --sidebar-section-label:rgba(255, 255, 255, 0.40);
+
+  /* Superficies */
+  --surface-page:         #F3F4F6;
+  --surface-card:         #FFFFFF;
+  --surface-card-border:  #E5E7EB;
+
+  /* Texto */
+  --text-primary:         #0F172A;
+  --text-secondary:       #64748B;
+  --text-muted:           #94A3B8;
+
+  /* Semánticos */
+  --color-success:        #059669;
+  --color-warning:        #D97706;
+  --color-danger:         #DC2626;
+
+  /* Header */
+  --header-height:        56px;
+  --header-bg:            #FFFFFF;
+  --header-border:        #E5E7EB;
+
+  /* Sidebar ancho */
+  --sidebar-width:        256px;
+}

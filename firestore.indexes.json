@@ -1,0 +1,116 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fecha", "order": "ASCENDING" },
+        { "fieldPath": "profesionalId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fecha", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "profesionales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "rol", "order": "ASCENDING" },
+        { "fieldPath": "activo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "resultados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "resultados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "citaId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "profesionalId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bloqueos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "profesionalId", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "rut", "order": "ASCENDING" },
+        { "fieldPath": "rol", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imagenes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "subidoEn", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "imagenes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
+        { "fieldPath": "subidoEn", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "creadoEn", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    }
+  ]
+}

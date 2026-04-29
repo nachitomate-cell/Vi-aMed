@@ -1,0 +1,185 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ViñaMed — Esquema de Base de Datos
+// Motor DEV:  SQLite   (archivo local, sin servidor)
+// Motor PROD: PostgreSQL (cambiar provider + quitar comentarios @db.*)
+// ORM: Prisma
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enumeraciones ────────────────────────────────────────────────────────────
+// Prisma gestiona los enums como strings en SQLite.
+
+enum Profesion {
+  TECNOLOGO_MEDICO
+  MEDICO_RADIOLOGO
+  ENFERMERO
+  ADMIN
+}
+
+enum ReportEstado {
+  PENDIENTE
+  COMPLETADO
+  FIRMADO
+}
+
+enum TipoExamen {
+  ECO_ABDOMINAL
+  ECO_PELVICA
+  ECO_OBSTETRICA
+  ECO_TIROIDES
+  ECO_MAMARIA
+  ECO_RENAL
+  ECO_VASCULAR
+  ECO_PARTES_BLANDAS
+  ECO_CARDIACA
+  OTRO
+}
+
+enum Sexo {
+  MASCULINO
+  FEMENINO
+  OTRO
+}
+
+enum Prevision {
+  FONASA
+  ISAPRE
+  PARTICULAR
+}
+
+enum AuditAccion {
+  CREACION
+  EDICION
+  CAMBIO_ESTADO
+  FIRMA
+  ELIMINACION
+  VISUALIZACION
+}
+
+// ─── Modelo: Paciente ─────────────────────────────────────────────────────────
+
+model Paciente {
+  id         String    @id @default(uuid())
+  rut        String    @unique
+  nombre     String
+  fecha_nac  DateTime
+  sexo       Sexo
+  prevision  Prevision
+  telefono   String?
+  email      String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  reports Report[]
+
+  @@index([rut])
+  @@map("pacientes")
+}
+
+// ─── Modelo: User (Staff Clínico) ─────────────────────────────────────────────
+// `facultades` se almacena como JSON (array de strings) ya que SQLite
+// no tiene tipo nativo de arrays. En prod (PostgreSQL) usar String[] @db.Text[].
+//
+// Relaciones User→Report nombradas explícitamente (3 FKs → misma tabla):
+//   "ReportAutor"    → informe creado por este usuario
+//   "ReportFirmante" → informe firmado por este usuario
+//   "ReportLastEdit" → último informe editado por este usuario
+
+model User {
+  id            String    @id @default(uuid())
+  rut           String    @unique
+  nombre        String
+  email         String    @unique
+  password_hash String
+  registro_sis  String?   @unique
+  profesion     Profesion
+  facultades    Json      @default("[]")
+  activo        Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  informes_creados  Report[]   @relation("ReportAutor")
+  informes_firmados Report[]   @relation("ReportFirmante")
+  informes_editados Report[]   @relation("ReportLastEdit")
+  audit_logs        AuditLog[] @relation("AuditUser")
+
+  @@index([rut])
+  @@index([email])
+  @@index([profesion])
+  @@index([activo])
+  @@map("users")
+}
+
+// ─── Modelo: Report (Informe de Ecografía) ────────────────────────────────────
+// Trazabilidad de autoría con tres FK independientes hacia User.
+// Reglas de negocio (en capa de servicio):
+//   - Estado FIRMADO → inmutable.
+//   - Solo ECO_SIGN puede firmar.
+//   - last_edited_by_id se actualiza en cada PATCH.
+
+model Report {
+  id                String       @id @default(uuid())
+  paciente_id       String
+  tipo_examen       TipoExamen
+  hallazgos         String
+  conclusion        String
+  recomendaciones   String?
+  estado            ReportEstado @default(PENDIENTE)
+
+  autor_id          String
+  firmante_id       String?
+  last_edited_by_id String?
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  signed_at  DateTime?
+
+  paciente       Paciente   @relation(fields: [paciente_id],       references: [id], onDelete: Restrict)
+  autor          User       @relation("ReportAutor",    fields: [autor_id],           references: [id], onDelete: Restrict)
+  firmante       User?      @relation("ReportFirmante", fields: [firmante_id],         references: [id], onDelete: SetNull)
+  last_edited_by User?      @relation("ReportLastEdit", fields: [last_edited_by_id],   references: [id], onDelete: SetNull)
+  audit_logs     AuditLog[] @relation("ReportAudit")
+
+  @@index([autor_id])
+  @@index([firmante_id])
+  @@index([paciente_id])
+  @@index([estado])
+  @@index([created_at])
+  @@index([autor_id, estado])
+  @@index([paciente_id, estado])
+  @@map("reports")
+}
+
+// ─── Modelo: AuditLog (Historial de Cambios) ─────────────────────────────────
+// Inmutable por diseño. Solo INSERT, nunca UPDATE/DELETE.
+// `cambios` (JSON): { campos_modificados[], antes{}, despues{} }
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  report_id  String
+  user_id    String
+  accion     AuditAccion
+  cambios    Json
+  ip_address String?
+  user_agent String?
+  created_at DateTime    @default(now())
+
+  report Report @relation("ReportAudit", fields: [report_id], references: [id], onDelete: Restrict)
+  user   User   @relation("AuditUser",   fields: [user_id],   references: [id], onDelete: Restrict)
+
+  @@index([report_id])
+  @@index([user_id])
+  @@index([accion])
+  @@index([created_at])
+  @@index([report_id, created_at])
+  @@index([user_id, created_at])
+  @@map("audit_logs")
+}

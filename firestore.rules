@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isStaff() {
+      // En desarrollo, permitimos que cualquier usuario autenticado sea Staff
+      // En producción, descomentar la validación de documento en /profesionales
+      return isAuth(); 
+      /*
+      return isAuth() &&
+        exists(/databases/$(database)/documents/profesionales/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/profesionales/$(request.auth.uid)).data.activo == true;
+      */
+    }
+
+    function isPaciente(rut) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rut == rut;
+    }
+
+    match /citas/{citaId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() && (
+        isPaciente(resource.data.pacienteRut) || isStaff()
+      );
+      allow delete: if isStaff();
+    }
+
+    match /resultados/{resultadoId} {
+      allow read: if true; // Lectura pública para facilitar integración con app paciente
+      allow create: if isStaff();
+      allow update: if isStaff();
+      allow delete: if false;
+    }
+
+    match /profesionales/{uid} {
+      allow read: if true;
+      allow create: if isAuth() && request.auth.uid == uid;
+      allow update: if true; // Temporal para permitir seed y ajustes
+      allow delete: if isStaff();
+    }
+
+    match /horarios/{profId} {
+      allow read: if isAuth();
+      allow write: if isStaff();
+    }
+
+    match /bloqueos/{bloqueoId} {
+      allow read: if isAuth();
+      allow write: if isStaff();
+    }
+
+    match /users/{uid} {
+      allow create: if request.auth.uid == uid
+                    && request.resource.data.rol == 'paciente';
+      allow read: if request.auth.uid == uid || isStaff();
+      allow update: if request.auth.uid == uid;
+    }
+
+    match /users/{uid}/legal/{doc} {
+      allow read, write: if isAuth() && request.auth.uid == uid;
+    }
+
+    match /tiposAtencion/{tipoId} {
+      allow read: if isAuth();
+      allow write: if isStaff();
+    }
+
+    match /asignaciones/{asigId} {
+      allow read: if isAuth();
+      allow write: if isStaff();
+    }
+
+    match /imagenes/{imagenId} {
+      allow read: if isStaff();
+      allow read: if isAuth() &&
+        isPaciente(resource.data.pacienteRut) &&
+        resource.data.visiblePaciente == true;
+      allow create, update: if isStaff();
+      allow delete: if false;
+    }
+  }
+}

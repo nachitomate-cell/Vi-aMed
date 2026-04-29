@@ -1,0 +1,38 @@
+{
+  "name": "Eco ViñaMed",
+  "short_name": "EcoViña",
+  "description": "Portal móvil de ecografías ViñaMed — agenda diaria y generación de informes clínicos en tiempo real.",
+  "start_url": "/eco-mobile/",
+  "scope": "/eco-mobile/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "lang": "es-CL",
+  "dir": "ltr",
+  "categories": ["medical", "health"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/logo2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agenda de hoy",
+      "short_name": "Agenda",
+      "description": "Ver pacientes agendados para ecografía",
+      "url": "/eco-mobile/",
+      "icons": [{ "src": "/logo2.png", "sizes": "192x192" }]
+    }
+  ]
+}
