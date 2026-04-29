@@ -41,5 +41,11 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^6.0.3"
-  }
+  },
+  "browserslist": [
+    "last 2 Safari versions",
+    "iOS >= 14",
+    "last 2 Chrome versions",
+    "last 2 Firefox versions"
+  ]
 }

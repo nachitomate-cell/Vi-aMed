@@ -66,20 +66,30 @@ const LoginIntroPage: React.FC = () => {
   return (
     <div
       style={{
+        backgroundColor: '#0E7490',
+        backgroundImage: [
+          '-webkit-linear-gradient(145deg, #0C4A6E 0%, #0E7490 50%, #0F766E 100%)',
+          'linear-gradient(145deg, #0C4A6E 0%, #0E7490 50%, #0F766E 100%)',
+        ].join(', '),
         minHeight: '100dvh',
+        colorScheme: 'light',
+        WebkitColorScheme: 'light' as any,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(145deg, #0C4A6E, #0E7490, #0F766E)',
         padding: '24px 20px',
         paddingTop: 'calc(24px + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
         position: 'relative',
         zIndex: 1,
         transition: 'opacity 0.6s ease-in-out',
         opacity: isExit ? 0 : 1,
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch' as any,
       }}
     >
       {/* Radial glow background */}

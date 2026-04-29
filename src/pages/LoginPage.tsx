@@ -243,6 +243,8 @@ const LoginPage: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif',
+        colorScheme: 'light',
+        backgroundColor: '#F8FAFC',
       }}>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -251,7 +253,11 @@ const LoginPage: React.FC = () => {
         <aside
           className="anim-left"
           style={{
-            background: 'linear-gradient(145deg, #0C4A6E 0%, #0E7490 50%, #0F766E 100%)',
+            backgroundColor: '#0E7490',
+            backgroundImage: [
+              '-webkit-linear-gradient(145deg, #0C4A6E 0%, #0E7490 50%, #0F766E 100%)',
+              'linear-gradient(145deg, #0C4A6E 0%, #0E7490 50%, #0F766E 100%)',
+            ].join(', '),
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',

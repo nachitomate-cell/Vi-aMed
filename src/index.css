@@ -13,6 +13,8 @@
   html {
     height: 100%;
     height: -webkit-fill-available;
+    color-scheme: light;
+    background-color: #0E7490;
   }
 
   body,
@@ -21,6 +23,10 @@
     min-height: 100dvh;
     min-height: -webkit-fill-available;
     overflow-x: hidden;
+    color-scheme: light;
+    background-color: #0E7490;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
   }
 }
 
