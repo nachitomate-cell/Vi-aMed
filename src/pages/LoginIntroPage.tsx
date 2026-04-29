@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { getDefaultRoute } from '../auth/authService';
 import { determinarRedirectPostLogin } from '../utils/device';
 
 type Phase = 'enter' | 'visible' | 'exit';

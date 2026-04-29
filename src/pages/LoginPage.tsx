@@ -1,6 +1,6 @@
 import React, { useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AuthError, getDefaultRoute, loginWithCredentials } from '../auth/authService';
+import { AuthError, loginWithCredentials } from '../auth/authService';
 import { determinarRedirectPostLogin } from '../utils/device';
 import { useAuth } from '../auth/AuthContext';
 import RecuperarContrasena from '../components/RecuperarContrasena';
