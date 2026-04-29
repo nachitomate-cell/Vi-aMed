@@ -29,31 +29,48 @@ const ProfesionalesPage: React.FC = () => {
     });
   };
 
-  useEffect(() => { cargarProfesionales(); }, []);
+  useEffect(() => {
+    cargarProfesionales();
+  }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'citas'), where('estado', '==', 'realizada'));
+    // Escuchar todas las citas (excepto canceladas si se desea, pero aquí contamos todo para "totales")
+    const q = query(collection(db, 'citas'));
+    
     const unsub = onSnapshot(q, snap => {
       const now = new Date();
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
       const counts: Record<string, { total: number; mes: number }> = {};
+      
       snap.docs.forEach(d => {
         const data = d.data() as Cita;
-        const pid = (data as unknown as { profesionalId: string }).profesionalId;
+        const pid = data.profesionalId;
+        
         if (!pid) return;
+        if (data.estado === 'cancelada') return; // No contar canceladas
+
         if (!counts[pid]) counts[pid] = { total: 0, mes: 0 };
+        
         counts[pid].total++;
-        if ((data.fecha as { toDate(): Date }).toDate() >= inicioMes) counts[pid].mes++;
+        
+        const fechaCita = data.fecha?.toDate ? data.fecha.toDate() : null;
+        if (fechaCita && fechaCita >= inicioMes) {
+          counts[pid].mes++;
+        }
       });
+      
       setConteos(counts);
+    }, (err) => {
+      console.error("Error en tiempo real de citas:", err);
     });
+    
     return () => unsub();
   }, []);
 
   const activos = profesionales.filter(p => p.activo).length;
 
   return (
-    <div className="space-y-6">
+    <div className="p-5 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -66,7 +83,7 @@ const ProfesionalesPage: React.FC = () => {
         </div>
         <button
           onClick={() => setModalAbierto(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold rounded-xl transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -77,47 +94,49 @@ const ProfesionalesPage: React.FC = () => {
 
       {/* Grid */}
       {error ? (
-        <div style={{
-          background: '#FEF2F2',
-          border: '0.5px solid #FECACA',
-          borderRadius: 12,
-          padding: '16px 20px',
-          color: '#991B1B',
-          fontSize: 14
-        }}>
-          No se pudo cargar el equipo. Verifica la conexión con Firestore o las reglas.
-          <br />
-          <code style={{ fontSize: 12, display: 'block', marginTop: 8 }}>{error.message}</code>
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-800 text-sm">
+          <p className="font-semibold">Error al cargar el equipo:</p>
+          <p>{error.message}</p>
         </div>
       ) : cargando ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-60 bg-white border border-slate-200 rounded-2xl animate-pulse shadow-sm" />
+            <div key={i} className="h-64 bg-white border border-slate-200 rounded-2xl animate-pulse shadow-sm" />
           ))}
         </div>
       ) : profesionales.length === 0 ? (
-        <div className="py-24 text-center space-y-3">
-          <p className="text-slate-500 text-sm">No hay profesionales registrados.</p>
+        <div className="py-20 text-center space-y-4">
+          <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-800 font-medium">No hay profesionales</p>
+            <p className="text-slate-500 text-sm">Comienza agregando uno nuevo o usa el botón de carga rápida.</p>
+          </div>
           <button
             onClick={async () => {
               try {
                 const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
                 const profs = [
+                  { nombre: 'Ignacio Gabriel', rut: '11.111.111-1', rol: 'enfermero', especialidad: '', color: '#0C4A6E', activo: true },
                   { nombre: 'Juan Pablo Cárdenas Galleguillos', rut: '17.479.898-2', rol: 'tecnologo', especialidad: 'Ecografía', color: '#0E7490', activo: true },
-                  { nombre: 'Sebastián Monsalve Astudillo', rut: '18.553.131-7', rol: 'tecnologo', especialidad: 'Ecografía', color: '#0F766E', activo: true },
-                  { nombre: 'Felipe Ramírez Blatter', rut: '', rol: 'medico', especialidad: 'Consulta Médica General', color: '#0E7490', activo: true }
+                  { nombre: 'Sebastián Monsalve Astudillo', rut: '18.553.131-7', rol: 'tecnologo', especialidad: 'Ecografía', color: '#0F766E', activo: true }
                 ];
-                for (const p of profs) await addDoc(collection(db, 'profesionales'), { ...p, creadoEn: serverTimestamp() });
+                for (const p of profs) {
+                  await addDoc(collection(db, 'profesionales'), { ...p, creadoEn: serverTimestamp() });
+                }
                 cargarProfesionales();
               } catch (e) { console.error(e); alert('Error: ' + (e as Error).message); }
             }}
-            className="text-white bg-[#0E7490] hover:bg-[#0c6680] text-sm px-4 py-2 rounded-xl transition-colors font-semibold"
+            className="inline-flex items-center gap-2 text-white bg-[#0E7490] hover:bg-[#0c6680] text-sm px-5 py-2.5 rounded-xl transition-colors font-semibold"
           >
-            Ejecutar Seed (Crear 2 tecnólogos)
+            Carga Rápida (Equipo Base)
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {profesionales.map(p => (
             <TarjetaProfesional
               key={p.id}
