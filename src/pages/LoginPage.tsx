@@ -175,9 +175,11 @@ const LoginPage: React.FC = () => {
   const rutState = getRutState(rut);
   const showRutError = rutTouched && rutState === 'invalid';
 
-  if (isAuthenticated) {
-    return <Navigate to={from ?? '/eco-mobile'} replace />;
-  }
+  // Quitamos la redirección automática aquí para que el flujo de handleSubmit
+  // pueda llevar al usuario a /intro sin ser interrumpido por un re-render.
+  // Si el usuario ya está autenticado y entra a /login manualmente, 
+  // el sistema lo dejará entrar al formulario, pero al intentar loguearse
+  // o refrescar, el AuthContext se encargará de la persistencia.
 
   const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setRut(e.target.value);
