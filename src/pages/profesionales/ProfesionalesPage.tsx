@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Profesional, Cita } from '../../types/agenda';
 import { getProfesionales } from '../../services/profesionalesService';
