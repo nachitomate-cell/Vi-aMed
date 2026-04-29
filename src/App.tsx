@@ -22,8 +22,8 @@ import NuevoPacientePage from './pages/NuevoPacientePage';
 import AgendaPage from './pages/AgendaPage';
 import ProfesionalesPage from './pages/profesionales/ProfesionalesPage';
 import ProfesionalPerfilPage from './pages/profesionales/ProfesionalPerfilPage';
-const MamografiaPage = lazy(() => import('./pages/mamografia'));
-const MamografiaMobilePage = lazy(() => import('./pages/mamografia-mobile'));
+// const MamografiaPage = lazy(() => import('./pages/mamografia'));
+// const MamografiaMobilePage = lazy(() => import('./pages/mamografia-mobile'));
 const ActivarCuenta = lazy(() => import('./pages/activar-cuenta'));
 
 const EcoMobileDashboard = lazy(() => import('./pages/eco-mobile/EcoMobileDashboard'));

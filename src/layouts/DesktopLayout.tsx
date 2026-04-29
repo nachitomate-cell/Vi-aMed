@@ -248,7 +248,7 @@ const DesktopLayout: React.FC = () => {
               <p style={{ fontSize: 11, fontWeight: 600, color: '#38BDF8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Soporte Técnico
               </p>
-              <div style={{ spaceY: 2 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <a 
                   href="mailto:hola@synaptech.cl" 
                   style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'rgba(255,255,255,0.8)', textDecoration: 'none', padding: '4px 0' }}

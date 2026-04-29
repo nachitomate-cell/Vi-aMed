@@ -1,5 +1,5 @@
 import {
-  collection, doc, addDoc, updateDoc, getDoc, getDocs,
+  collection, doc, updateDoc, getDoc, getDocs,
   query, where, orderBy, serverTimestamp,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';

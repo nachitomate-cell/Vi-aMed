@@ -50,6 +50,7 @@ export interface Cita {
   creadoEn?: Timestamp;
   actualizadoEn?: Timestamp;
   visiblePaciente: boolean;
+  origenCita?: string;
 }
 
 export interface Profesional {
@@ -60,6 +61,8 @@ export interface Profesional {
   color: string;
   activo: boolean;
   email?: string;
+  rut?: string;
+  creadoEn?: Timestamp;
 }
 
 export interface PacienteResultado {

@@ -2,43 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { ScheduledPatient } from '../../types/eco-mobile';
 import InformeSheet from '../../components/eco-mobile/InformeSheet';
 
-const TODAY_SCHEDULE: ScheduledPatient[] = [
-  {
-    id: 'p-001',
-    rut: '12.345.678-9',
-    fullName: 'Ana Valeria Morales Salas',
-    age: 42,
-    sex: 'F',
-    examType: 'Eco de Abdomen',
-    scheduledTime: '09:30',
-    prevision: 'FONASA',
-    priority: 'normal',
-    observations: 'Paciente en ayunas. Control post-operatorio.',
-  },
-  {
-    id: 'p-002',
-    rut: '9.876.543-2',
-    fullName: 'Roberto Ignacio Fuentes',
-    age: 58,
-    sex: 'M',
-    examType: 'Eco Tiroides',
-    scheduledTime: '10:15',
-    prevision: 'ISAPRE',
-    priority: 'urgent',
-    observations: 'Nódulo detectado en control previo. Derivado de endocrinología.',
-  },
-  {
-    id: 'p-003',
-    rut: '15.432.100-K',
-    fullName: 'Catalina Paz Vega Robles',
-    age: 31,
-    sex: 'F',
-    examType: 'Eco Pélvica',
-    scheduledTime: '11:00',
-    prevision: 'Particular',
-    priority: 'normal',
-  },
-];
+
 
 const PREVISION_BADGE: Record<ScheduledPatient['prevision'], string> = {
   FONASA: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
@@ -166,20 +130,20 @@ const EcoMobileDashboard: React.FC = () => {
 
   useEffect(() => {
     const unsub = escucharCitasDelDia(new Date(), (citas) => {
-      const mapped = citas
-        .filter(c => c.profesionalId === authUser?.uid || !c.profesionalId) // Ver sus citas o las no asignadas
+      const mapped: ScheduledPatient[] = citas
+        .filter(c => c.profesionalId === authUser?.uid || !c.profesionalId)
         .map(c => ({
           id: c.id,
           rut: c.pacienteRut,
           fullName: c.pacienteNombre,
-          age: 0, // No guardamos edad en cita, podríamos obtenerla de otro lado o dejar en 0
-          sex: 'M', 
+          age: 0,
+          sex: 'M' as 'M' | 'F', 
           examType: c.tipoAtencion,
           scheduledTime: c.fecha?.toDate ? c.fecha.toDate().toTimeString().slice(0, 5) : '--:--',
           prevision: 'Particular',
-          priority: 'normal',
+          priority: 'normal' as 'normal' | 'urgent',
           observations: c.notas,
-          reportStatus: c.estado === 'realizada' ? 'completed' : 'pending'
+          reportStatus: (c.estado === 'realizada' ? 'completed' : 'pending') as 'pending' | 'completed'
         }));
       
       setSchedule(mapped);

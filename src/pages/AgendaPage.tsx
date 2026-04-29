@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { CalendarioMini, DIAS_CON_ATENCION } from '../components/agenda/CalendarioMini';
+import { CalendarioMini } from '../components/agenda/CalendarioMini';
 import { ListaCitasDia } from '../components/agenda/ListaCitasDia';
 import { ModalNuevaCita } from '../components/agenda/ModalNuevaCita';
 import { ModalNuevoBloqueo } from '../components/agenda/ModalNuevoBloqueo';

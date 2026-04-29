@@ -45,11 +45,11 @@ interface SeedUser {
   passwordHash: string; // En demo, comparamos en plain-text. En producción, bcrypt en backend.
 }
 
-const SEED_USERS: SeedUser[] = [
-  { rut: '17.479.898-2', nombre: 'Juan Pablo Cárdenas Galleguillos', profesion: 'TECNOLOGO_MEDICO', passwordHash: 'VinamedCl2025!' },
-  { rut: '18.553.131-7', nombre: 'Sebastián Monsalve Astudillo',     profesion: 'TECNOLOGO_MEDICO', passwordHash: 'VinamedCl2025!' },
-  { rut: '20.988.528-K', nombre: 'Ignacio Gabriel Mateluna Maturana', profesion: 'ENFERMERO',       passwordHash: 'VinamedCl2025!' },
-];
+// const SEED_USERS: SeedUser[] = [
+//   { rut: '17.479.898-2', nombre: 'Juan Pablo Cárdenas Galleguillos', profesion: 'TECNOLOGO_MEDICO', passwordHash: 'VinamedCl2025!' },
+//   { rut: '18.553.131-7', nombre: 'Sebastián Monsalve Astudillo',     profesion: 'TECNOLOGO_MEDICO', passwordHash: 'VinamedCl2025!' },
+//   { rut: '20.988.528-K', nombre: 'Ignacio Gabriel Mateluna Maturana', profesion: 'ENFERMERO',       passwordHash: 'VinamedCl2025!' },
+// ];
 
 import { 
   collection, 

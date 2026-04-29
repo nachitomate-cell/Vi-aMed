@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { isSignInWithEmailLink, signInWithEmailLink, updatePassword } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { authVinamed, dbVinamed } from '../lib/firebase';

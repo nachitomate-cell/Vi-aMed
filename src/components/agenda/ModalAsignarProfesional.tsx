@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, query, where, getDocs, setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Profesional } from '../../types/agenda';
 
