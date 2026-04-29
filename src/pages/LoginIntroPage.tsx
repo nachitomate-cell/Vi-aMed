@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { getDefaultRoute } from '../auth/authService';
 
 type Phase = 'enter' | 'visible' | 'exit';
 
@@ -8,11 +9,24 @@ const LoginIntroPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const destination = (location.state as { to?: string } | null)?.to ?? '/dashboard';
+
+  // Determinar el destino con mayor robustez
+  const stateTo = (location.state as { to?: string } | null)?.to;
+  const defaultRoute = user ? getDefaultRoute(user.role) : '/dashboard';
+  
+  // Si el destino es /intro o es igual a la ruta actual, usamos la ruta por defecto del rol
+  // para evitar bucles infinitos.
+  let destination = stateTo ?? defaultRoute;
+  if (destination === '/intro' || destination === location.pathname) {
+    destination = defaultRoute;
+  }
 
   const [phase, setPhase] = useState<Phase>('enter');
 
   useEffect(() => {
+    // Si por algún motivo el destino sigue siendo /intro (no debería), forzamos dashboard
+    const finalDest = destination === '/intro' ? '/dashboard' : destination;
+
     // enter → visible: trigger CSS transitions on next frame
     const t0 = requestAnimationFrame(() => setPhase('visible'));
 
@@ -20,7 +34,7 @@ const LoginIntroPage: React.FC = () => {
     const t1 = setTimeout(() => setPhase('exit'), 2400);
 
     // navigate after exit animation completes (600ms)
-    const t2 = setTimeout(() => navigate(destination, { replace: true }), 3000);
+    const t2 = setTimeout(() => navigate(finalDest, { replace: true }), 3000);
 
     return () => {
       cancelAnimationFrame(t0);

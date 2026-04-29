@@ -1,4 +1,4 @@
-﻿const CACHE = 'vinamed-shell-v2';
+const CACHE = 'vinamed-shell-v3';
 const ASSETS = [
   './vinamed_app.html',
   './manifest.json',
