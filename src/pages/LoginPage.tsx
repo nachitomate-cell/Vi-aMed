@@ -1,5 +1,5 @@
 import React, { useId, useRef, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthError, getDefaultRoute, loginWithCredentials } from '../auth/authService';
 import { useAuth } from '../auth/AuthContext';
 import RecuperarContrasena from '../components/RecuperarContrasena';
@@ -155,7 +155,7 @@ const EyeClosed: React.FC = () => (
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 const LoginPage: React.FC = () => {
-  const { isAuthenticated, login } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
