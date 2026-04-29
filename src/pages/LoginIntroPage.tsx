@@ -73,7 +73,6 @@ const LoginIntroPage: React.FC = () => {
         ].join(', '),
         minHeight: '100dvh',
         colorScheme: 'light',
-        WebkitColorScheme: 'light' as any,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
