@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { getDefaultRoute } from '../auth/authService';
+import { determinarRedirectPostLogin } from '../utils/device';
 
 type Phase = 'enter' | 'visible' | 'exit';
 
@@ -12,7 +13,7 @@ const LoginIntroPage: React.FC = () => {
 
   // Determinar el destino con mayor robustez
   const stateTo = (location.state as { to?: string } | null)?.to;
-  const defaultRoute = user ? getDefaultRoute(user.role) : '/dashboard';
+  const defaultRoute = determinarRedirectPostLogin();
   
   let destination = stateTo ?? defaultRoute;
   if (destination === '/intro' || destination === location.pathname) {
@@ -50,9 +51,14 @@ const LoginIntroPage: React.FC = () => {
       handleNavigate();
     }, 3500);
 
+    // Marcar que este login viene de /intro (móvil) para redirigir a /eco-mobile
+    sessionStorage.setItem('loginOrigen', 'eco-mobile');
+
     return () => {
       cancelAnimationFrame(t0);
       clearTimeout(t1);
+      // Limpiar la flag al salir si ya navegamos
+      sessionStorage.removeItem('loginOrigen');
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     };

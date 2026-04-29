@@ -119,14 +119,24 @@ const SectionLabel: React.FC<{ text: string; accent: string }> = ({ text, accent
 
 /* ─── Dashboard ─────────────────────────────────────────── */
 import { useAuth } from '../../auth/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { esMobile } from '../../utils/device';
 import { escucharCitasDelDia } from '../../services/citasService';
 
 const EcoMobileDashboard: React.FC = () => {
   const { user: authUser } = useAuth(); // Necesitamos el UID del profesional
+  const navigate = useNavigate();
   const [schedule, setSchedule] = useState<ScheduledPatient[]>([]);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [sheetPatient, setSheetPatient] = useState<ScheduledPatient | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Si accede desde desktop, redirigir al dashboard completo
+    if (!esMobile()) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     const unsub = escucharCitasDelDia(new Date(), (citas) => {

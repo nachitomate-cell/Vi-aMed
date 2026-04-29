@@ -1,6 +1,7 @@
 import React, { useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthError, getDefaultRoute, loginWithCredentials } from '../auth/authService';
+import { determinarRedirectPostLogin } from '../utils/device';
 import { useAuth } from '../auth/AuthContext';
 import RecuperarContrasena from '../components/RecuperarContrasena';
 
@@ -209,7 +210,8 @@ const LoginPage: React.FC = () => {
     try {
       const { user } = await loginWithCredentials(formattedRut, password);
       login(user);
-      navigate('/intro', { replace: true, state: { to: from ?? getDefaultRoute(user.role) } });
+      const target = from ?? determinarRedirectPostLogin();
+      navigate('/intro', { replace: true, state: { to: target } });
     } catch (err) {
       setAuthError(
         err instanceof AuthError

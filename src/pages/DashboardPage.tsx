@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { esMobile } from '../utils/device';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type BoxState = 'available' | 'busy' | 'maintenance';
@@ -122,6 +123,13 @@ const QuickCard: React.FC<{
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const fechaLarga = useMemo(getFechaLarga, []);
+
+  useEffect(() => {
+    // Si accede desde móvil, redirigir a eco-mobile
+    if (esMobile()) {
+      navigate('/eco-mobile', { replace: true });
+    }
+  }, [navigate]);
 
   const [boxes, setBoxes] = useState<Record<string, BoxState>>({
     eco: 'available',
