@@ -4,8 +4,7 @@ import {
   query, 
   onSnapshot, 
   limit, 
-  orderBy,
-  querySnapshot
+  orderBy
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../auth/AuthContext';
