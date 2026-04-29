@@ -138,7 +138,17 @@
         { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
         { "fieldPath": "creadoEn", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
+        { "fieldPath": "creadoEn", "order": "DESCENDING" }
+      ]
     }
   ]
 }
+
 
