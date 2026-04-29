@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { getDefaultRoute } from '../auth/authService';
@@ -14,8 +14,6 @@ const LoginIntroPage: React.FC = () => {
   const stateTo = (location.state as { to?: string } | null)?.to;
   const defaultRoute = user ? getDefaultRoute(user.role) : '/dashboard';
   
-  // Si el destino es /intro o es igual a la ruta actual, usamos la ruta por defecto del rol
-  // para evitar bucles infinitos.
   let destination = stateTo ?? defaultRoute;
   if (destination === '/intro' || destination === location.pathname) {
     destination = defaultRoute;
@@ -23,25 +21,42 @@ const LoginIntroPage: React.FC = () => {
 
   const [phase, setPhase] = useState<Phase>('enter');
 
-  useEffect(() => {
-    // Si por algún motivo el destino sigue siendo /intro (no debería), forzamos dashboard
-    const finalDest = destination === '/intro' ? '/dashboard' : destination;
+  // Función de navegación robusta
+  const handleNavigate = useCallback(() => {
+    setPhase('exit');
+    setTimeout(() => {
+      try {
+        navigate(destination, { replace: true });
+      } catch (err) {
+        console.error('Navegación fallida:', err);
+        window.location.href = destination;
+      }
+    }, 400);
+  }, [navigate, destination]);
 
-    // enter → visible: trigger CSS transitions on next frame
+  useEffect(() => {
+    // Forzar scroll al top en móvil
+    window.scrollTo(0, 0);
+    
+    // Prevenir que el body tenga overflow:hidden que tape el intro
+    document.body.style.overflow = 'visible';
+    document.documentElement.style.overflow = 'visible';
+
+    // Animación de entrada
     const t0 = requestAnimationFrame(() => setPhase('visible'));
 
-    // visible → exit after 2.4s
-    const t1 = setTimeout(() => setPhase('exit'), 2400);
-
-    // navigate after exit animation completes (600ms)
-    const t2 = setTimeout(() => navigate(finalDest, { replace: true }), 3000);
+    // Redirección automática después de 3.5 segundos (un poco más para dar tiempo al usuario)
+    const t1 = setTimeout(() => {
+      handleNavigate();
+    }, 3500);
 
     return () => {
       cancelAnimationFrame(t0);
       clearTimeout(t1);
-      clearTimeout(t2);
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
-  }, [navigate, destination]);
+  }, [handleNavigate]);
 
   const isVisible = phase === 'visible';
   const isExit    = phase === 'exit';
@@ -50,9 +65,23 @@ const LoginIntroPage: React.FC = () => {
 
   return (
     <div
-      className={`fixed inset-0 flex flex-col items-center justify-center bg-[#F8FAFC] overflow-hidden
-        transition-opacity duration-700
-        ${isExit ? 'opacity-0' : 'opacity-100'}`}
+      style={{
+        minHeight: '100dvh',
+        minHeight: '-webkit-fill-available' as any,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(145deg, #0C4A6E, #0E7490, #0F766E)',
+        padding: '24px 20px',
+        paddingTop: 'calc(24px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+        position: 'relative',
+        zIndex: 1,
+        transition: 'opacity 0.6s ease-in-out',
+        opacity: isExit ? 0 : 1,
+        overflow: 'hidden',
+      }}
     >
       {/* Radial glow background */}
       <div
@@ -64,18 +93,6 @@ const LoginIntroPage: React.FC = () => {
         }}
       />
 
-      {/* Ring pulse */}
-      <div
-        className={`absolute rounded-full border border-[#0E7490]/10 pointer-events-none
-          transition-all duration-1000
-          ${isVisible ? 'w-72 h-72 opacity-100' : 'w-40 h-40 opacity-0'}`}
-      />
-      <div
-        className={`absolute rounded-full border border-[#0E7490]/5 pointer-events-none
-          transition-all duration-[1200ms]
-          ${isVisible ? 'w-96 h-96 opacity-100' : 'w-48 h-48 opacity-0'}`}
-      />
-
       {/* Logo */}
       <div
         className={`relative z-10 transition-all duration-700 ease-out
@@ -84,7 +101,7 @@ const LoginIntroPage: React.FC = () => {
         <img
           src="/logo2.png"
           alt="ViñaMed"
-          className="h-28 w-28 object-contain drop-shadow-[0_0_40px_rgba(14,116,144,0.15)]"
+          style={{ height: 80, objectFit: 'contain', marginBottom: 24, filter: 'brightness(0) invert(1)' }}
           onError={e => {
             const el = e.currentTarget as HTMLImageElement;
             el.style.display = 'none';
@@ -92,48 +109,88 @@ const LoginIntroPage: React.FC = () => {
         />
       </div>
 
-      {/* Divider line */}
+      {/* Título */}
       <div
-        className={`relative z-10 mt-7 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent
-          transition-all duration-700 delay-200
-          ${isVisible ? 'w-48 opacity-100' : 'w-0 opacity-0'}`}
-      />
-
-      {/* Text */}
-      <div
-        className={`relative z-10 mt-6 text-center transition-all duration-600 delay-300
+        className={`relative z-10 text-center transition-all duration-600 delay-300
           ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
       >
-        <p className="text-slate-500 text-sm tracking-widest uppercase font-medium">
-          Bienvenido
+        <p style={{
+          fontFamily: 'Georgia, serif',
+          fontStyle: 'italic',
+          fontSize: 32,
+          color: '#fff',
+          margin: '0 0 8px',
+          textAlign: 'center',
+        }}>
+          Portal Clínico
         </p>
-        <p
-          className="mt-2 text-3xl font-bold tracking-tight"
-          style={{
-            background: 'linear-gradient(90deg, #0E7490, #0C4A6E)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          {firstName}
+        <p style={{
+          fontSize: 13,
+          color: 'rgba(255,255,255,0.6)',
+          letterSpacing: '.15em',
+          textTransform: 'uppercase',
+          fontWeight: 500,
+          margin: '0 0 40px',
+          textAlign: 'center',
+        }}>
+          ViñaMed · Centro de Diagnóstico
         </p>
-        {user?.role && (
-          <p className="mt-1.5 text-slate-600 text-xs tracking-wide">
-            {user.role}
-          </p>
-        )}
       </div>
 
-      {/* Bottom loading dots */}
+      {/* Bienvenida personalizada */}
       <div
-        className={`absolute bottom-16 flex items-center gap-2
-          transition-all duration-700 delay-500
+        className={`relative z-10 mb-12 text-center transition-all duration-700 delay-500
+          ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      >
+        <p className="text-emerald-300 text-xs font-bold uppercase tracking-[0.2em] mb-2">
+          Sesión Iniciada
+        </p>
+        <h2 className="text-white text-2xl font-light">
+          Hola, <span className="font-semibold">{firstName}</span>
+        </h2>
+      </div>
+
+      {/* Botón principal — FIX touch */}
+      <button
+        onClick={handleNavigate}
+        className={`relative z-20 w-full max-w-[320px] py-4 rounded-2xl bg-white text-[#0C4A6E] text-base font-bold shadow-2xl transition-all duration-700 delay-700
+          ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        style={{
+          border: 'none',
+          cursor: 'pointer',
+          WebkitTapHighlightColor: 'rgba(0,0,0,0.1)',
+          touchAction: 'manipulation',
+          userSelect: 'none',
+        }}
+      >
+        Acceder al Sistema
+      </button>
+
+      {/* Link alternativo como fallback */}
+      <a
+        href={destination}
+        onClick={(e) => {
+          e.preventDefault();
+          handleNavigate();
+        }}
+        className={`relative z-20 mt-6 text-sm text-white/50 no-underline px-5 py-3 transition-all duration-700 delay-[900ms]
           ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          touchAction: 'manipulation',
+        }}
+      >
+        Ingresar directamente →
+      </a>
+
+      {/* Decoración inferior */}
+      <div
+        className={`absolute bottom-12 flex items-center gap-1.5 transition-opacity duration-1000 delay-1000
+          ${isVisible ? 'opacity-30' : 'opacity-0'}`}
       >
         {[0, 1, 2].map(i => (
           <span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-pulse"
+            className="w-1 h-1 rounded-full bg-white animate-pulse"
             style={{ animationDelay: `${i * 200}ms` }}
           />
         ))}
