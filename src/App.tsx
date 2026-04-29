@@ -9,6 +9,7 @@ import {
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import DesktopLayout from './layouts/DesktopLayout';
 import MobilePwaLayout from './layouts/MobilePwaLayout';
+import { NotificationManager } from './components/shared/NotificationManager';
 
 import DashboardPage from './pages/DashboardPage';
 import AtencionMedicaPage from './pages/AtencionMedicaPage';
@@ -192,6 +193,7 @@ const AppRoutes: React.FC = () => (
 const App: React.FC = () => (
   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <AuthProvider>
+      <NotificationManager />
       <AppRoutes />
     </AuthProvider>
   </BrowserRouter>

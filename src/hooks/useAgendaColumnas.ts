@@ -149,7 +149,7 @@ function generarSlots(
 
     // Slot libre
     slots.push({ hora, minutosAbsolutos: cursor, tipo: 'libre', duracionMinutos: durSlot });
-    cursor += durSlot;
+    cursor += durSlot + tiempoMuerto;
   }
 
   return slots;

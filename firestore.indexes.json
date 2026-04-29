@@ -111,6 +111,34 @@
         { "fieldPath": "creadoEn", "order": "ASCENDING" },
         { "fieldPath": "__name__", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "imagenes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "tipo", "order": "ASCENDING" },
+        { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
+        { "fieldPath": "subidoEn", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "citas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "fecha", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "resultados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pacienteRut", "order": "ASCENDING" },
+        { "fieldPath": "visiblePaciente", "order": "ASCENDING" },
+        { "fieldPath": "creadoEn", "order": "DESCENDING" }
+      ]
     }
   ]
 }
+
