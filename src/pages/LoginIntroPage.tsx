@@ -67,7 +67,6 @@ const LoginIntroPage: React.FC = () => {
     <div
       style={{
         minHeight: '100dvh',
-        minHeight: '-webkit-fill-available' as any,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
