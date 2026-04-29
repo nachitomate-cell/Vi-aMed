@@ -9,11 +9,11 @@ export type BoxCita = typeof BOXES[number];
 export const DURACIONES_MINUTOS = [15, 30, 45, 60, 90] as const;
 
 export const ESTADO_LABELS: Record<EstadoCita, string> = {
-  solicitada: 'Solicitada',
+  solicitada: 'Pendiente',
   confirmada: 'Confirmada',
   realizada: 'Realizada',
-  cancelada: 'Cancelada',
-  no_asistio: 'No asistió',
+  cancelada: 'Rechazada',
+  no_asistio: 'Ausente',
 };
 
 export const ESTADO_COLORS: Record<EstadoCita, string> = {

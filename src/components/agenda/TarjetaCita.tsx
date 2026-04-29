@@ -83,18 +83,21 @@ export const TarjetaCita: React.FC<Props> = ({ cita, onEditar, onCancelar, profe
 
           {/* Acciones */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            <select
-              value={estadoLocal}
-              onChange={handleEstado}
-              disabled={cambiando}
-              className={`text-[11px] px-2 py-1 rounded-md border font-medium bg-transparent cursor-pointer focus:outline-none transition-colors ${ESTADO_COLORS[estadoLocal]}`}
-            >
-              {ESTADOS.map(s => (
-                <option key={s} value={s} className="bg-white text-slate-800">
-                  {ESTADO_LABELS[s]}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-col gap-1 items-end">
+              <label className="text-[9px] uppercase tracking-wider text-slate-400 font-bold px-1">Estado</label>
+              <select
+                value={estadoLocal}
+                onChange={handleEstado}
+                disabled={cambiando}
+                className={`text-[11px] px-2.5 py-1.5 rounded-lg border font-bold bg-white cursor-pointer focus:ring-2 focus:ring-[#0E7490]/20 outline-none transition-all ${ESTADO_COLORS[estadoLocal]}`}
+              >
+                {ESTADOS.map(s => (
+                  <option key={s} value={s} className="bg-white text-slate-800 font-medium">
+                    {ESTADO_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button
               onClick={() => onEditar(cita)}
