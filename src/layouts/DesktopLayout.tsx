@@ -81,7 +81,7 @@ const DesktopLayout: React.FC = () => {
         <div style={{ padding: '32px 24px 24px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
           <div className="relative">
             <img
-              src="/logo2.png"
+              src={`/logo2.png?v=${Date.now()}`}
               alt="ViñaMed"
               style={{ height: 42, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.2))' }}
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
@@ -271,7 +271,7 @@ const DesktopLayout: React.FC = () => {
             }}
           >
             <img
-              src="/logo3.png"
+              src={`/logo3.png?v=${Date.now()}`}
               alt="Synaptech Spa"
               style={{ height: 20, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
