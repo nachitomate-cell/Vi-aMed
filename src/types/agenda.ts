@@ -51,11 +51,16 @@ export interface Cita {
   actualizadoEn?: Timestamp;
   visiblePaciente: boolean;
   origenCita?: string;
+  informeId?: string;
 }
 
 export interface Profesional {
   id: string;
   nombre: string;
+  apellidoPaterno?: string;
+  apellidoMaterno?: string;
+  telefono?: string;
+  comision?: number;
   rol: RolProfesional;
   especialidad: string;
   color: string;

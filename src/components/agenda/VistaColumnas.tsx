@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { ColumnaAgenda, Slot, Bloqueo } from '../../types/horarios';
 import type { Cita } from '../../types/agenda';
 import { eliminarBloqueo, excluirDiaBloqueo, truncarRecurrencia } from '../../services/horariosService';
@@ -33,11 +34,13 @@ const SlotLibre: React.FC<{
 }> = ({ slot, onClick }) => (
   <div
     onClick={onClick}
-    className="group flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-200 hover:border-[#0E7490] bg-white hover:bg-[#0E7490]/5 rounded-lg cursor-pointer transition-all duration-150"
+    className={`group flex items-center gap-2 px-3 py-2.5 border border-dashed hover:border-[#0E7490] rounded-lg cursor-pointer transition-all duration-150 ${
+      slot.esSobrecupo ? 'bg-green-100/50 border-green-300 hover:bg-green-200/50' : 'bg-white border-slate-200 hover:bg-[#0E7490]/5'
+    }`}
     title={`Agendar ${slot.hora}`}
   >
-    <span className="text-[10px] font-mono text-slate-500 group-hover:text-[#0E7490] w-10 flex-shrink-0">{slot.hora}</span>
-    <span className="text-xs text-slate-500 group-hover:text-[#0E7490]">Libre</span>
+    <span className={`text-[10px] font-mono group-hover:text-[#0E7490] w-10 flex-shrink-0 ${slot.esSobrecupo ? 'text-green-700 font-bold' : 'text-slate-500'}`}>{slot.hora}</span>
+    <span className={`text-xs group-hover:text-[#0E7490] ${slot.esSobrecupo ? 'text-green-800 font-semibold' : 'text-slate-500'}`}>Libre {slot.esSobrecupo && '(Sobrecupo)'}</span>
     <span className="ml-auto opacity-0 group-hover:opacity-100 text-[#0E7490] text-xs transition-opacity">+ Agendar</span>
   </div>
 );
@@ -150,7 +153,18 @@ const ColumnaProfesional: React.FC<{
       <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl mb-3 border border-slate-200 shadow-sm">
         <Avatar nombre={profesional.nombre} color={profesional.color} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800 truncate">{profesional.nombre}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-semibold text-slate-800 truncate">{profesional.nombre}</p>
+            <Link
+              to={`/agenda/${profesional.id}`}
+              className="p-0.5 text-slate-300 hover:text-[#0E7490] transition-colors flex-shrink-0"
+              title="Ver agenda completa del turno"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Link>
+          </div>
           <p className="text-[10px] text-slate-500 truncate">Tecnólogo Médico</p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] text-[#0E7490] font-medium">{totalCitas} citas</span>

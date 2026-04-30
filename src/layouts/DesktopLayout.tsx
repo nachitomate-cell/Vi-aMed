@@ -55,12 +55,12 @@ const DesktopLayout: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--surface-page)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--surface-page)', overflow: 'hidden' }}>
 
       {/* ═══════════════════════════════════════════════════════════
           SIDEBAR
       ═══════════════════════════════════════════════════════════ */}
-      <aside 
+      <aside
         className="sidebar-scroll"
         style={{
           width: 'var(--sidebar-width)',
@@ -72,7 +72,9 @@ const DesktopLayout: React.FC = () => {
           position: 'sticky',
           top: 0,
           height: '100vh',
+          minHeight: '100vh',
           overflowY: 'auto',
+          overflowX: 'hidden',
           boxShadow: '4px 0 24px rgba(0,0,0,0.2)',
         }}
       >
@@ -126,6 +128,17 @@ const DesktopLayout: React.FC = () => {
                   </>
                 )}
               </NavLink>
+              <NavLink to="/recepcion" className={navLinkClasses}>
+                {({ isActive }) => (
+                  <>
+                    {isActive && <div className={activeIndicatorClasses} />}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Recepción
+                  </>
+                )}
+              </NavLink>
             </div>
           </div>
 
@@ -140,7 +153,7 @@ const DesktopLayout: React.FC = () => {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                     </svg>
-                    Fichas Rápidas
+                    Box Medicina
                   </>
                 )}
               </NavLink>
@@ -238,6 +251,28 @@ const DesktopLayout: React.FC = () => {
                 )}
               </NavLink>
               <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '12px 16px' }} />
+              <NavLink to="/gestion" className={navLinkClasses}>
+                {({ isActive }) => (
+                  <>
+                    {isActive && <div className={activeIndicatorClasses} />}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Gestión interna
+                  </>
+                )}
+              </NavLink>
+              <NavLink to="/pacientes" className={navLinkClasses}>
+                {({ isActive }) => (
+                  <>
+                    {isActive && <div className={activeIndicatorClasses} />}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    Pacientes
+                  </>
+                )}
+              </NavLink>
               <NavLink to="/nuevopaciente" className={navLinkClasses}>
                 {({ isActive }) => (
                   <>
@@ -324,6 +359,7 @@ const DesktopLayout: React.FC = () => {
                   </svg>
                   +569 8356 8212
                 </a>
+                <a href="/presentacion.mp4" target="_blank" style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', marginTop: 4, textAlign: 'center' }}>Botón secreto</a>
               </div>
             </div>
           )}
@@ -333,7 +369,7 @@ const DesktopLayout: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════
           ÁREA PRINCIPAL
       ═══════════════════════════════════════════════════════════ */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
 
         {/* Header superior */}
         <header style={{
@@ -497,29 +533,37 @@ const DesktopLayout: React.FC = () => {
               from { opacity: 0; transform: translateY(10px); }
               to { opacity: 1; transform: translateY(0); }
             }
+            .sidebar-scroll {
+              scrollbar-width: thin;
+              scrollbar-color: rgba(14, 116, 144, 0.4) transparent;
+            }
             .sidebar-scroll::-webkit-scrollbar {
-              width: 4px;
+              width: 3px;
             }
             .sidebar-scroll::-webkit-scrollbar-track {
               background: transparent;
             }
             .sidebar-scroll::-webkit-scrollbar-thumb {
-              background: rgba(255,255,255,0.1);
+              background: rgba(14, 116, 144, 0.35);
               border-radius: 10px;
             }
             .sidebar-scroll:hover::-webkit-scrollbar-thumb {
-              background: rgba(255,255,255,0.2);
+              background: rgba(103, 232, 249, 0.5);
             }
           `}</style>
         </header>
 
         {/* Contenido de la página */}
-        <div style={{
-          flex: 1,
-          overflow: 'auto',
-          background: 'var(--surface-page)',
-          padding: 24,
-        }}>
+        <div
+          className="content-scroll"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            background: 'var(--surface-page)',
+            padding: 24,
+          }}
+        >
           <Outlet />
         </div>
       </main>

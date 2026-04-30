@@ -1,46 +1,78 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useGestionDatos } from '../hooks/useGestionDatos';
 
 interface PacienteForm {
-  nombre: string;
+  tipoDocumento: 'rut' | 'pasaporte';
   rut: string;
-  edad: string;
-  motivo: string;
-  box: string;
+  pasaporte: string;
+  pais: string;
+  nombres: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  fechaNacimiento: string;
+  telefono: string;
+  correo: string;
+  sexo: string;
+  direccion: string;
 }
 
-const BOXES = [
-  { value: '', label: 'Sin asignar' },
-  { value: 'eco', label: 'Box Ecografía' },
-  { value: 'enfermeria', label: 'Box Enfermería' },
-  { value: 'muestras', label: 'Sala Muestras' },
-  { value: 'atencion', label: 'Atención Médica' },
-];
-
-const EMPTY: PacienteForm = { nombre: '', rut: '', edad: '', motivo: '', box: '' };
+const EMPTY: PacienteForm = {
+  tipoDocumento: 'rut',
+  rut: '',
+  pasaporte: '',
+  pais: '',
+  nombres: '',
+  apellidoPaterno: '',
+  apellidoMaterno: '',
+  fechaNacimiento: '',
+  telefono: '',
+  correo: '',
+  sexo: '',
+  direccion: ''
+};
 
 const NuevoPacientePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from ?? '/dashboard';
   const [form, setForm] = useState<PacienteForm>(EMPTY);
   const [saved, setSaved] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const { opciones } = useGestionDatos();
 
   const set = (k: keyof PacienteForm, v: string) => setForm(f => ({ ...f, [k]: v }));
 
+  const isExtranjero = form.tipoDocumento === 'pasaporte';
+
   const handleSave = () => {
-    if (!form.nombre || !form.rut) { alert('Nombre y RUT son obligatorios.'); return; }
+    // Validations
+    if (isExtranjero) {
+      if (!form.pasaporte || !form.pais || !form.nombres || !form.apellidoPaterno || !form.apellidoMaterno || !form.fechaNacimiento || !form.telefono) {
+        setShowError(true);
+        return;
+      }
+    } else {
+      if (!form.rut || !form.nombres || !form.apellidoPaterno || !form.apellidoMaterno || !form.fechaNacimiento || !form.telefono) {
+        setShowError(true);
+        return;
+      }
+    }
+
+    setShowError(false);
     setSaved(true);
     setTimeout(() => {
       setForm(EMPTY);
       setSaved(false);
-      navigate('/dashboard');
+      navigate(from);
     }, 1500);
   };
 
   return (
-    <div className="p-5 max-w-lg mx-auto space-y-5">
+    <div className="p-5 max-w-2xl mx-auto space-y-5">
       <div>
         <h1 className="text-xl font-bold text-slate-800">Registrar Paciente</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Ingresa un nuevo paciente para el turno actual</p>
+        <p className="text-sm text-slate-500 mt-0.5">Ingresa un nuevo paciente en el sistema</p>
       </div>
 
       {saved ? (
@@ -50,38 +82,117 @@ const NuevoPacientePage: React.FC = () => {
           <p className="text-slate-500 text-sm mt-1">Redirigiendo al dashboard...</p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-5 space-y-4">
-          <Field label="Nombre completo *">
-            <input value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Juan Pérez González" />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="RUT *">
-              <input value={form.rut} onChange={e => set('rut', e.target.value)} placeholder="12.345.678-9" />
-            </Field>
-            <Field label="Edad">
-              <input type="number" value={form.edad} onChange={e => set('edad', e.target.value)} placeholder="35" min={0} max={120} />
-            </Field>
+        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 inline-block">
+              (*) Obligatorio
+            </p>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="nacionalidad"
+                  checked={!isExtranjero}
+                  onChange={() => set('tipoDocumento', 'rut')}
+                  className="w-4 h-4 text-[#0E7490] focus:ring-[#0E7490]"
+                />
+                <span className="text-sm font-medium text-slate-700">Chileno(a)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="nacionalidad"
+                  checked={isExtranjero}
+                  onChange={() => set('tipoDocumento', 'pasaporte')}
+                  className="w-4 h-4 text-[#0E7490] focus:ring-[#0E7490]"
+                />
+                <span className="text-sm font-medium text-slate-700">Extranjero(a)</span>
+              </label>
+            </div>
           </div>
-          <Field label="Motivo de consulta">
-            <input value={form.motivo} onChange={e => set('motivo', e.target.value)} placeholder="Ej: Ecografía abdominal" />
-          </Field>
-          <Field label="Box de atención">
-            <select value={form.box} onChange={e => set('box', e.target.value)}>
-              {BOXES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-            </select>
-          </Field>
-          <div className="flex gap-3 pt-2">
+
+          {showError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-semibold text-sm">
+              FORMULARIO INVÁLIDO: Por favor completa todos los campos obligatorios.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {isExtranjero ? (
+              <>
+                <Field label="Pasaporte *">
+                  <input value={form.pasaporte} onChange={e => set('pasaporte', e.target.value)} placeholder="Ej: AB123456" />
+                </Field>
+                <Field label="País *">
+                  <input value={form.pais} onChange={e => set('pais', e.target.value)} placeholder="Ej: Argentina" />
+                </Field>
+              </>
+            ) : (
+              <div className="md:col-span-2">
+                <Field label="RUT *">
+                  <input value={form.rut} onChange={e => set('rut', e.target.value)} placeholder="12.345.678-9" />
+                </Field>
+              </div>
+            )}
+
+            <div className="md:col-span-2">
+               <Field label="Nombres *">
+                 <input 
+                   value={form.nombres} 
+                   onChange={e => set('nombres', e.target.value)} 
+                   placeholder="Ej: Juan Pablo"
+                   maxLength={isExtranjero ? 50 : undefined} 
+                 />
+                 {isExtranjero && <span className="text-[10px] text-slate-400 mt-1 block">Máximo 50 caracteres</span>}
+               </Field>
+            </div>
+
+            <Field label="Apellido paterno *">
+              <input value={form.apellidoPaterno} onChange={e => set('apellidoPaterno', e.target.value)} placeholder="Ej: Pérez" />
+            </Field>
+
+            <Field label="Apellido materno *">
+              <input value={form.apellidoMaterno} onChange={e => set('apellidoMaterno', e.target.value)} placeholder="Ej: González" />
+            </Field>
+
+            <Field label="Fecha de nacimiento *">
+              <input type="date" value={form.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)} />
+            </Field>
+
+            <Field label="Teléfono *">
+              <input type="tel" value={form.telefono} onChange={e => set('telefono', e.target.value)} placeholder="+56 9 1234 5678" />
+            </Field>
+
+            <Field label="Correo">
+              <input type="email" value={form.correo} onChange={e => set('correo', e.target.value)} placeholder="correo@ejemplo.com" />
+            </Field>
+
+            <Field label="Sexo">
+              <select value={form.sexo} onChange={e => set('sexo', e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {opciones.sexos.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </Field>
+
+            <div className="md:col-span-2">
+              <Field label="Dirección">
+                <input value={form.direccion} onChange={e => set('direccion', e.target.value)} placeholder="Ej: Av. Siempreviva 123" />
+              </Field>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-slate-100">
             <button
-              onClick={() => navigate(-1)}
-              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 text-sm transition-colors"
+              onClick={() => navigate(from)}
+              className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleSave}
-              className="flex-1 py-2 rounded-xl bg-[#0E7490] hover:bg-[#0c6680] text-white font-semibold text-sm transition-colors shadow-lg shadow-[#0E7490]/20"
+              className="flex-1 py-2.5 rounded-xl bg-[#0E7490] hover:bg-[#0C4A6E] text-white font-semibold shadow-lg shadow-[#0E7490]/20 transition-all"
             >
-              Registrar
+              Registrar Paciente
             </button>
           </div>
         </div>
@@ -92,8 +203,8 @@ const NuevoPacientePage: React.FC = () => {
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="space-y-1">
-    <label className="text-xs text-slate-500">{label}</label>
-    <div className="[&_input]:w-full [&_input]:bg-white [&_input]:border [&_input]:border-slate-200 [&_input]:rounded-lg [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:text-slate-800 [&_input]:placeholder-slate-400 [&_input]:outline-none [&_input]:focus:border-[#0E7490]/60 [&_select]:w-full [&_select]:bg-white [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:px-3 [&_select]:py-2 [&_select]:text-sm [&_select]:text-slate-800 [&_select]:outline-none [&_select]:focus:border-[#0E7490]/60">
+    <label className="block text-xs font-medium text-slate-500">{label}</label>
+    <div className="[&_input]:w-full [&_input]:bg-slate-50 [&_input]:border [&_input]:border-slate-200 [&_input]:rounded-xl [&_input]:px-4 [&_input]:py-2.5 [&_input]:text-sm [&_input]:text-slate-800 [&_input]:placeholder-slate-400 [&_input]:outline-none [&_input]:focus:border-[#0E7490] [&_input]:focus:ring-1 [&_input]:focus:ring-[#0E7490]/20 [&_select]:w-full [&_select]:bg-slate-50 [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-xl [&_select]:px-4 [&_select]:py-2.5 [&_select]:text-sm [&_select]:text-slate-800 [&_select]:outline-none [&_select]:focus:border-[#0E7490] [&_select]:focus:ring-1 [&_select]:focus:ring-[#0E7490]/20">
       {children}
     </div>
   </div>

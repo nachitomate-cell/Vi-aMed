@@ -6,10 +6,10 @@ import type { Horario, Bloqueo, Slot, ColumnaAgenda } from '../types/horarios';
 
 // ─── Días de trabajo de los tecnólogos de ViñaMed ────────────────────────────
 export const DIAS_ATENCION_DEFAULT = [1, 3, 6]; // Lun, Mié, Sáb
-export const HORA_INICIO_DEFAULT = '08:00';
+export const HORA_INICIO_DEFAULT = '09:00';
 export const HORA_FIN_DEFAULT = '17:00';
-export const DURACION_SLOT_DEFAULT = 30;
-export const TIEMPO_MUERTO_DEFAULT = 10;
+export const DURACION_SLOT_DEFAULT = 15;
+export const TIEMPO_MUERTO_DEFAULT = 0;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,12 +53,16 @@ function generarSlots(
   fecha: Date,
   horario: Horario,
   citasDia: Cita[],
-  bloqueosDia: Bloqueo[]
+  bloqueosDia: Bloqueo[],
+  sobrecupoActivo: boolean
 ): Slot[] {
   const inicioMin = horaToMin(horario.horaInicio);
-  const finMin = horaToMin(horario.horaFin);
-  const durSlot = horario.duracionSlotMinutos;
-  const tiempoMuerto = horario.tiempoMuertoMinutos;
+  const horaFinNormal = horaToMin(horario.horaFin);
+  const finMin = sobrecupoActivo ? horaFinNormal + 60 : horaFinNormal;
+  
+  // Forzar 15 minutos sin tiempo de preparación
+  const durSlot = 15;
+  const tiempoMuerto = 0;
 
   const slots: Slot[] = [];
 
@@ -123,6 +127,8 @@ function generarSlots(
       continue; // el slot de tiempo muerto ya se agregó con la cita
     }
 
+    const esSobrecupo = cursor >= horaFinNormal;
+
     // ¿Está bloqueado?
     const bloqueoCubre = bloqueoRangos.find(r =>
       solapan(cursor, durSlot, r.inicio, r.fin - r.inicio)
@@ -148,7 +154,7 @@ function generarSlots(
     }
 
     // Slot libre
-    slots.push({ hora, minutosAbsolutos: cursor, tipo: 'libre', duracionMinutos: durSlot });
+    slots.push({ hora, minutosAbsolutos: cursor, tipo: 'libre', duracionMinutos: durSlot, esSobrecupo });
     cursor += durSlot + tiempoMuerto;
   }
 
@@ -166,20 +172,26 @@ export function useAgendaColumnas(fecha: Date, profesionales: Profesional[], fil
   const [bloqueos, setBloqueos] = useState<Bloqueo[]>([]);
   const [horarios, setHorarios] = useState<Map<string, Horario>>(new Map());
   const [asignacionId, setAsignacionId] = useState<string | null>(null);
+  const [asignacionIds, setAsignacionIds] = useState<string[]>([]);
   const [diaCerrado, setDiaCerrado] = useState(false);
+  const [sobrecupoActivo, setSobrecupoActivo] = useState(false);
   const [cargando, setCargando] = useState(true);
 
   const fechaKey = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
   const diaSemana = fecha.getDay();
 
-  // Profesionales activos ese día (basado en horarios cargados)
+  // Profesionales activos ese día (basado en horarios + asignación del día)
   const profesionalesDelDia = useMemo(() => {
     if (profesionales.length === 0 || diaCerrado) return [];
     const filtered = filtros.profesionalId
       ? profesionales.filter(p => p.id === filtros.profesionalId)
       : profesionales;
-    
-    // Si hay una asignación específica para el día, priorizamos eso
+
+    // Si hay asignación multi-profesional para el día, usarla
+    if (asignacionIds.length > 0 && !filtros.profesionalId) {
+      return filtered.filter(p => asignacionIds.includes(p.id));
+    }
+    // Compatibilidad legacy: asignación de un solo profesional
     if (asignacionId && !filtros.profesionalId) {
       return filtered.filter(p => p.id === asignacionId);
     }
@@ -189,7 +201,7 @@ export function useAgendaColumnas(fecha: Date, profesionales: Profesional[], fil
       if (!h || !h.activo) return false;
       return h.diasSemana.includes(diaSemana);
     });
-  }, [profesionales, horarios, diaSemana, filtros.profesionalId, asignacionId]);
+  }, [profesionales, horarios, diaSemana, filtros.profesionalId, asignacionId, asignacionIds, diaCerrado]);
 
   const profIds = useMemo(
     () => profesionales.filter(p => p.activo).map(p => p.id),
@@ -237,11 +249,19 @@ export function useAgendaColumnas(fecha: Date, profesionales: Profesional[], fil
     const unsub = onSnapshot(q, snap => {
       if (!snap.empty) {
         const data = snap.docs[0].data();
-        setAsignacionId(data.profesionalId || null);
+        // Soporte para array nuevo (multi) y campo legacy (single)
+        const ids: string[] = Array.isArray(data.profesionalesIds)
+          ? data.profesionalesIds
+          : data.profesionalId ? [data.profesionalId] : [];
+        setAsignacionIds(ids);
+        setAsignacionId(ids[0] ?? null);
         setDiaCerrado(!!data.cerrado);
+        setSobrecupoActivo(!!data.sobrecupo);
       } else {
+        setAsignacionIds([]);
         setAsignacionId(null);
         setDiaCerrado(false);
+        setSobrecupoActivo(false);
       }
     });
     return () => unsub();
@@ -304,14 +324,14 @@ export function useAgendaColumnas(fecha: Date, profesionales: Profesional[], fil
 
       const bloqueosProf = bloqueos.filter(b => b.profesionalId === prof.id);
 
-      const slots = generarSlots(fecha, horario, citasProf, bloqueosProf);
+      const slots = generarSlots(fecha, horario, citasProf, bloqueosProf, sobrecupoActivo);
 
       const totalCitas = slots.filter(s => s.tipo === 'cita').length;
       const totalLibres = slots.filter(s => s.tipo === 'libre').length;
 
       return { profesional: prof, horario, slots, totalCitas, totalLibres };
     });
-  }, [profesionalesDelDia, citasDia, bloqueos, horarios, fecha]);
+  }, [profesionalesDelDia, citasDia, bloqueos, horarios, fecha, sobrecupoActivo]);
 
   // ¿El día tiene atención?
   const hayAtencion = profesionalesDelDia.length > 0;
@@ -332,5 +352,5 @@ export function useAgendaColumnas(fecha: Date, profesionales: Profesional[], fil
     return result;
   }, [fecha, horarios]);
 
-  return { columnas, hayAtencion, proximosDiasConAtencion, cargando };
+  return { columnas, hayAtencion, proximosDiasConAtencion, cargando, sobrecupoActivo, diaCerrado, asignacionId };
 }

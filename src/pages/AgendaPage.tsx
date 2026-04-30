@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { CalendarioMini } from '../components/agenda/CalendarioMini';
 import { ListaCitasDia } from '../components/agenda/ListaCitasDia';
 import { ModalNuevaCita } from '../components/agenda/ModalNuevaCita';
@@ -33,6 +34,7 @@ const AgendaPage: React.FC = () => {
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [tiposAtencion, setTiposAtencion] = useState<string[]>([]);
   const [horaPreseleccionada, setHoraPreseleccionada] = useState<string | undefined>();
+  const [reloadKey, setReloadKey] = useState(0);
 
   /* Filtros */
   const [filProfesional, setFilProfesional] = useState('');
@@ -40,7 +42,7 @@ const AgendaPage: React.FC = () => {
   const [filTipo, setFilTipo] = useState('');
 
   /* Modo vista: columnas o lista */
-  const { columnas, hayAtencion, proximosDiasConAtencion, cargando: cargandoColumnas } = useAgendaColumnas(
+  const { columnas, hayAtencion, proximosDiasConAtencion, cargando: cargandoColumnas, sobrecupoActivo } = useAgendaColumnas(
     fechaSel,
     profesionales,
     { profesionalId: filProfesional || undefined }
@@ -96,6 +98,20 @@ const AgendaPage: React.FC = () => {
     if (!confirmando) return;
     await actualizarEstadoCita(confirmando.id, 'cancelada').catch(console.error);
     setConfirmando(null);
+  };
+
+  const handleToggleSobrecupo = async () => {
+    try {
+      const dKey = toKey(fechaSel);
+      const { setDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebase');
+      await setDoc(doc(db, 'asignaciones', dKey), {
+        fecha: dKey,
+        sobrecupo: !sobrecupoActivo
+      }, { merge: true });
+    } catch (err) {
+      console.error('Error toggling sobrecupo', err);
+    }
   };
 
   const limpiarFiltros = () => { setFilProfesional(''); setFilEstado(''); setFilTipo(''); };
@@ -219,6 +235,38 @@ const AgendaPage: React.FC = () => {
             <div className="flex items-center justify-between mb-1">
               <div />
               <div className="flex gap-2">
+                <button
+                  onClick={() => setReloadKey(k => k + 1)}
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-[#0E7490] text-slate-500 hover:text-[#0E7490] text-xs font-semibold rounded-xl transition-all shadow-sm"
+                  title="Recargar agenda"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.69" />
+                  </svg>
+                  Recargar
+                </button>
+                <button
+                  onClick={handleToggleSobrecupo}
+                  className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition-all shadow-sm ${
+                    sobrecupoActivo 
+                      ? 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200' 
+                      : 'bg-white border border-red-200 text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Sobrecupo
+                </button>
+                <Link
+                  to="/atencion"
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 text-xs font-semibold rounded-xl transition-all shadow-sm"
+                >
+                  <svg className="w-3.5 h-3.5 text-[#0E7490]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  + Agregar atención
+                </Link>
                 <button
                   onClick={() => setModalAsignacionOpen(true)}
                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 text-xs font-semibold rounded-xl transition-all shadow-sm"

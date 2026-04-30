@@ -15,7 +15,7 @@ const AtencionMedicaPage: React.FC = () => (
         <span className="inline-block bg-amber-500/10 text-amber-400 border border-amber-500/25 text-xs font-semibold px-3 py-1 rounded-full mb-3">
           Próximo módulo
         </span>
-        <h2 className="text-xl font-bold text-slate-100">Fichas Rápidas</h2>
+        <h2 className="text-xl font-bold text-slate-100">Box Medicina</h2>
         <p className="text-sm text-slate-500 mt-2">
           Registro simplificado de atención médica con historial por paciente y búsqueda por RUT.
         </p>

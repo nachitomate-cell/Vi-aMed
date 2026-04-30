@@ -208,6 +208,40 @@ const LoginIntroPage: React.FC = () => {
           />
         ))}
       </div>
+
+      {/* SynapTech branding */}
+      <div
+        className={`absolute bottom-5 flex flex-col items-center gap-1.5 transition-all duration-1000 delay-[1200ms]
+          ${isVisible ? 'opacity-60 translate-y-0' : 'opacity-0 translate-y-3'}`}
+      >
+        <img
+          src="/logo3.png"
+          alt="SynapTech"
+          style={{
+            height: 22,
+            objectFit: 'contain',
+            filter: 'brightness(0) invert(1)',
+            animation: isVisible ? 'synapPulse 3s ease-in-out infinite' : 'none',
+          }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+        />
+        <p style={{
+          fontSize: 9,
+          color: 'rgba(255,255,255,0.45)',
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          margin: 0,
+          fontWeight: 500,
+        }}>
+          Desarrollado por SynapTech Spa
+        </p>
+      </div>
+      <style>{`
+        @keyframes synapPulse {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 0.85; transform: scale(1.06); }
+        }
+      `}</style>
     </div>
   );
 };

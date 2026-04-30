@@ -33,7 +33,7 @@ export const ModalNuevoBloqueo: React.FC<Props> = ({
   );
   const [tipo, setTipo] = useState<TipoBloqUI>('rango');
   const [fecha, setFecha] = useState(fechaDefault ? formatDateInput(fechaDefault) : formatDateInput(new Date()));
-  const [horaInicio, setHoraInicio] = useState('08:00');
+  const [horaInicio, setHoraInicio] = useState('09:00');
   const [horaFin, setHoraFin] = useState('09:00');
   const [motivo, setMotivo] = useState('');
   const [recurrente, setRecurrente] = useState(false);

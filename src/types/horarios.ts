@@ -46,6 +46,7 @@ export interface Slot {
   cita?: import('./agenda').Cita;
   bloqueo?: Bloqueo;
   duracionMinutos?: number;  // para citas y bloqueos multi-slot
+  esSobrecupo?: boolean;
 }
 
 // ─── Columna de profesional para VistaColumnas ────────────────────────────────

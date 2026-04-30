@@ -7,22 +7,18 @@ service cloud.firestore {
     }
 
     function isStaff() {
-      return isAuth(); 
+      return isAuth();
     }
 
-    function isPaciente(rut) {
-      return isAuth() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rut == rut;
-    }
-
+    // ── Citas ────────────────────────────────────────────────────
     match /citas/{citaId} {
       allow read: if true;
-      allow create: if true; 
-      allow update: if isAuth() || true; // Permitir temporalmente para pruebas
+      allow create: if true;
+      allow update: if true;
       allow delete: if isStaff();
     }
 
+    // ── Resultados (informes eco) ────────────────────────────────
     match /resultados/{resultadoId} {
       allow read: if true;
       allow create: if isStaff();
@@ -30,13 +26,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Profesionales ────────────────────────────────────────────
     match /profesionales/{uid} {
       allow read: if true;
-      allow create: if isAuth() && request.auth.uid == uid;
-      allow update: if true;
+      allow create: if isStaff();
+      allow update: if isStaff();
       allow delete: if isStaff();
     }
 
+    // ── Horarios y bloqueos ──────────────────────────────────────
     match /horarios/{profId} {
       allow read: if true;
       allow write: if isStaff();
@@ -47,31 +45,79 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // ── Usuarios / Pacientes ─────────────────────────────────────
     match /users/{uid} {
-      allow read: if true; // Permitir lectura para el perfil mock y auth real
+      allow read: if true;
       allow create: if true;
       allow update: if true;
+      allow delete: if isStaff();
     }
 
-    match /users/{uid}/legal/{doc} {
+    match /users/{uid}/legal/{document} {
       allow read, write: if true;
     }
 
+    // ── Tipos de atención (legado) ───────────────────────────────
     match /tiposAtencion/{tipoId} {
       allow read: if true;
       allow write: if isStaff();
     }
 
+    // ── Asignaciones de turno ────────────────────────────────────
     match /asignaciones/{asigId} {
       allow read: if true;
       allow write: if isStaff();
     }
 
+    // ── Imágenes ─────────────────────────────────────────────────
     match /imagenes/{imagenId} {
       allow read: if true;
       allow create, update: if isStaff();
       allow delete: if false;
     }
+
+    // ── Colecciones de gestión interna ───────────────────────────
+    match /gestion_especialidades/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /gestion_previsiones/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /gestion_prestaciones/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /gestion_metodos_pago/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /gestion_sexos/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // ── Usuarios staff (dashboard) ───────────────────────────────
+    match /usuarios/{uid} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    // ── Pacientes (colección propia del dashboard) ───────────────
+    match /pacientes/{pacId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ── Tipos de atención (legado) ─────────────────────────────
+    match /tiposAtencion/{tipoId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
   }
 }
-

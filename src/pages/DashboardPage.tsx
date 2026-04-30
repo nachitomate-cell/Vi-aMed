@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { collection, query, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { esMobile } from '../utils/device';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -123,6 +125,30 @@ const QuickCard: React.FC<{
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const fechaLarga = useMemo(getFechaLarga, []);
+
+  // Últimos 5 pacientes (citas)
+  const [ultimasCitas, setUltimasCitas] = useState<{
+    id: string;
+    pacienteNombre: string;
+    pacienteRut: string;
+    tipoAtencion: string;
+    estado: string;
+    fecha: Timestamp;
+  }[]>([]);
+  const [loadingCitas, setLoadingCitas] = useState(true);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'citas'),
+      orderBy('fecha', 'desc'),
+      limit(5)
+    );
+    const unsub = onSnapshot(q, snap => {
+      setUltimasCitas(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      setLoadingCitas(false);
+    }, () => setLoadingCitas(false));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     // Si accede desde móvil, redirigir a eco-mobile
@@ -296,35 +322,72 @@ const DashboardPage: React.FC = () => {
 
       {/* ── Actividad Reciente ────────────────────────────────────── */}
       <div>
-        {sectionLabel('Actividad Reciente')}
+        {sectionLabel('Actividad Reciente — Últimos 5 pacientes')}
         <div style={{
           background: 'var(--surface-card)',
           border: '0.5px solid var(--surface-card-border)',
           borderRadius: 12,
           overflow: 'hidden',
         }}>
-          <div style={{ padding: '32px', textAlign: 'center' }}>
-            <div style={{ 
-              width: 40, 
-              height: 40, 
-              borderRadius: '50%', 
-              border: '3px solid #f1f5f9',
-              borderTopColor: 'var(--color-primary)',
-              margin: '0 auto 16px',
-              animation: 'spin 1s linear infinite'
-            }} />
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
-              Sincronizando actividad en tiempo real...
-            </p>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-              Los últimos registros de atención aparecerán aquí automáticamente.
-            </p>
-          </div>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
+          {loadingCitas ? (
+            <div style={{ padding: '32px', textAlign: 'center' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #f1f5f9', borderTopColor: 'var(--color-primary)', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }} />
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>Cargando actividad...</p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : ultimasCitas.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>No hay atenciones registradas aún.</p>
+            </div>
+          ) : (
+            ultimasCitas.map((cita, i) => {
+              const fecha = (cita.fecha as any)?.toDate?.();
+              const horaStr = fecha ? fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '—';
+              const fechaStr = fecha ? fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+              const estadoColors: Record<string, string> = {
+                solicitada: '#D97706', confirmada: '#0891B2', realizada: '#059669',
+                cancelada: '#DC2626', no_asistio: '#EA580C',
+              };
+              const estadoColor = estadoColors[cita.estado] ?? 'var(--text-muted)';
+              return (
+                <div
+                  key={cita.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: '12px 20px',
+                    borderBottom: i < ultimasCitas.length - 1 ? '0.5px solid var(--surface-card-border)' : 'none',
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: 'rgba(14,116,144,0.10)', color: 'var(--color-primary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: 14, flexShrink: 0,
+                  }}>
+                    {cita.pacienteNombre?.slice(0, 1) ?? '?'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {cita.pacienteNombre ?? 'Sin nombre'}
+                    </p>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {cita.tipoAtencion ?? '—'} · {cita.pacienteRut ?? ''}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: estadoColor, margin: 0, textTransform: 'capitalize' }}>
+                      {cita.estado?.replace('_', ' ') ?? '—'}
+                    </p>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                      {fechaStr} {horaStr}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { setDoc, doc, serverTimestamp, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Profesional } from '../../types/agenda';
 
@@ -13,26 +13,49 @@ interface Props {
 export const ModalAsignarProfesional: React.FC<Props> = ({
   fecha, profesionales, onCerrar, onAsignado
 }) => {
-  const [profesionalId, setProfesionalId] = useState('');
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [isCerrado, setIsCerrado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   const dKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
 
+  // Cargar asignación existente al abrir el modal
+  useEffect(() => {
+    getDoc(doc(db, 'asignaciones', dKey)).then(snap => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setIsCerrado(data.cerrado ?? false);
+        // Soportar tanto el array nuevo como el campo único legacy
+        if (Array.isArray(data.profesionalesIds)) {
+          setSeleccionados(data.profesionalesIds);
+        } else if (data.profesionalId) {
+          setSeleccionados([data.profesionalId]);
+        }
+      }
+    }).catch(() => {});
+  }, [dKey]);
+
+  const toggleProfesional = (id: string) => {
+    setSeleccionados(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const handleAsignar = async () => {
-    if (!profesionalId) return;
+    if (!isCerrado && seleccionados.length === 0) return;
     setGuardando(true);
     try {
-      // Guardamos la asignación usando la fecha como ID de documento para que sea única por día
       await setDoc(doc(db, 'asignaciones', dKey), {
         fecha: dKey,
-        profesionalId: isCerrado ? null : profesionalId,
+        profesionalesIds: isCerrado ? [] : seleccionados,
+        // Legacy compat: primer profesional seleccionado
+        profesionalId: isCerrado ? null : (seleccionados[0] ?? null),
         cerrado: isCerrado,
-        actualizadoEn: serverTimestamp()
+        actualizadoEn: serverTimestamp(),
       });
       onAsignado();
     } catch (err) {
-      console.error('Error al asignar profesional:', err);
+      console.error('Error al asignar turno:', err);
     } finally {
       setGuardando(false);
     }
@@ -41,9 +64,6 @@ export const ModalAsignarProfesional: React.FC<Props> = ({
   const handleLimpiar = async () => {
     setGuardando(true);
     try {
-      // Para limpiar, simplemente borramos el documento o lo dejamos vacío
-      // En este caso, lo borraremos para que vuelva a la lógica de horario por defecto
-      const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(doc(db, 'asignaciones', dKey));
       onAsignado();
     } catch (err) {
@@ -53,13 +73,15 @@ export const ModalAsignarProfesional: React.FC<Props> = ({
     }
   };
 
+  const activos = profesionales.filter(p => p.activo);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-5">
         <div>
-          <h3 className="text-base font-semibold text-slate-800">Estado del Día</h3>
+          <h3 className="text-base font-semibold text-slate-800">Turno del Día</h3>
           <p className="text-xs text-slate-500 mt-1">
-            Gestiona la disponibilidad del centro para el {dKey}.
+            {dKey} · Selecciona uno o más profesionales para el turno.
           </p>
         </div>
 
@@ -67,8 +89,8 @@ export const ModalAsignarProfesional: React.FC<Props> = ({
         <button
           onClick={() => setIsCerrado(!isCerrado)}
           className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-            isCerrado 
-              ? 'bg-rose-50 border-rose-200 ring-1 ring-rose-500' 
+            isCerrado
+              ? 'bg-rose-50 border-rose-200 ring-1 ring-rose-500'
               : 'bg-emerald-50 border-emerald-200 hover:border-emerald-300'
           }`}
         >
@@ -96,48 +118,68 @@ export const ModalAsignarProfesional: React.FC<Props> = ({
           </div>
         </button>
 
+        {/* Lista multi-selección de profesionales */}
         {!isCerrado && (
-          <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Seleccionar Tecnólogo</p>
-            {profesionales.filter(p => p.activo).map(p => (
-              <button
-                key={p.id}
-                onClick={() => setProfesionalId(p.id)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                  profesionalId === p.id
-                    ? 'border-[#0E7490] bg-[#0E7490]/5 ring-1 ring-[#0E7490]'
-                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                }`}
-              >
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                  style={{ backgroundColor: p.color }}
-                >
-                  {p.nombre.slice(0, 1)}
-                </div>
-                <div className="text-left">
-                  <p className={`text-sm font-medium ${profesionalId === p.id ? 'text-[#0E7490]' : 'text-slate-700'}`}>
-                    {p.nombre}
-                  </p>
-                  <p className="text-[10px] text-slate-500">{p.rol}</p>
-                </div>
-                {profesionalId === p.id && (
-                  <div className="ml-auto">
-                    <svg className="w-5 h-5 text-[#0E7490]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Profesionales en turno</p>
+              {seleccionados.length > 0 && (
+                <span className="text-[10px] font-semibold bg-[#0E7490]/10 text-[#0E7490] px-2 py-0.5 rounded-full">
+                  {seleccionados.length} seleccionado{seleccionados.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+              {activos.map(p => {
+                const selected = seleccionados.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => toggleProfesional(p.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      selected
+                        ? 'border-[#0E7490] bg-[#0E7490]/5 ring-1 ring-[#0E7490]'
+                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
+                    }`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                      style={{ backgroundColor: p.color }}
+                    >
+                      {p.nombre.slice(0, 1)}
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${selected ? 'text-[#0E7490]' : 'text-slate-700'}`}>
+                        {p.nombre}
+                      </p>
+                      <p className="text-[10px] text-slate-500">{p.especialidad ?? p.rol}</p>
+                    </div>
+                    {/* Checkbox visual */}
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                      selected ? 'bg-[#0E7490] border-[#0E7490]' : 'border-slate-300'
+                    }`}>
+                      {selected && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              {activos.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-4">No hay profesionales activos.</p>
+              )}
+            </div>
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
+        {/* Acciones */}
+        <div className="flex gap-3 pt-2 border-t border-slate-100">
           <button
             onClick={handleLimpiar}
             disabled={guardando}
-            className="flex-1 px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+            className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors disabled:opacity-50"
           >
             Limpiar turno
           </button>
@@ -145,16 +187,21 @@ export const ModalAsignarProfesional: React.FC<Props> = ({
             onClick={onCerrar}
             className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
           >
-            Cerrar
+            Cancelar
           </button>
           <button
             onClick={handleAsignar}
-            disabled={guardando || (!isCerrado && !profesionalId)}
+            disabled={guardando || (!isCerrado && seleccionados.length === 0)}
             className={`px-5 py-2 flex-1 rounded-xl text-xs font-bold text-white transition-colors shadow-sm ${
               isCerrado ? 'bg-rose-600 hover:bg-rose-700' : 'bg-[#0E7490] hover:bg-[#0C4A6E]'
             } disabled:opacity-50`}
           >
-            {guardando ? 'Guardando...' : isCerrado ? 'Confirmar Cierre' : 'Asignar Turno'}
+            {guardando
+              ? 'Guardando...'
+              : isCerrado
+              ? 'Confirmar Cierre'
+              : `Asignar ${seleccionados.length > 0 ? `(${seleccionados.length})` : 'Turno'}`
+            }
           </button>
         </div>
       </div>

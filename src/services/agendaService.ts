@@ -51,7 +51,7 @@ export async function getProfesionales(): Promise<Profesional[]> {
 }
 
 export async function getTiposAtencion(): Promise<string[]> {
-  const snap = await getDocs(collection(db, 'tiposAtencion'));
+  const snap = await getDocs(collection(db, 'gestion_prestaciones'));
   if (snap.empty) {
     return [
       'Ecografía Abdominal',

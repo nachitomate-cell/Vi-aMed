@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useGestionDatos } from '../hooks/useGestionDatos';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { authVinamed, dbVinamed } from '../lib/firebase';
@@ -28,6 +29,7 @@ export default function RegistroProfesionalPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { opciones } = useGestionDatos();
 
   const formatRut = (raw: string) => {
     const clean = raw.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -141,7 +143,10 @@ export default function RegistroProfesionalPage() {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>Especialidad</label>
-              <input type="text" name="especialidad" value={form.especialidad} onChange={handleChange} placeholder="Ej: Radiología" style={{ width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0', borderRadius: '8px', outline: 'none' }} />
+              <select name="especialidad" value={form.especialidad} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', border: '1px solid #E2E8F0', borderRadius: '8px', outline: 'none', background: '#fff' }}>
+                <option value="">Seleccionar...</option>
+                {opciones.especialidades.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
             </div>
           </div>
 

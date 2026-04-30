@@ -35,8 +35,8 @@ interface FormData {
   duracionMinutos: number;
   box: string;
   notas: string;
-  visiblePaciente: boolean;
   prestacion?: string; // Nuevo campo opcional
+  estado: EstadoCita;
 }
 
 function buildForm(fecha?: Date, cita?: Cita): FormData {
@@ -57,6 +57,7 @@ function buildForm(fecha?: Date, cita?: Cita): FormData {
       notas: cita.notas,
       visiblePaciente: cita.visiblePaciente,
       prestacion: cita.tipoAtencion.startsWith('Ecografía') ? cita.tipoAtencion : '',
+      estado: cita.estado,
     };
   }
   const d = fecha ?? new Date();
@@ -75,6 +76,7 @@ function buildForm(fecha?: Date, cita?: Cita): FormData {
     notas: '',
     visiblePaciente: true,
     prestacion: '',
+    estado: 'confirmada',
   };
 }
 
@@ -189,7 +191,7 @@ export const ModalNuevaCita: React.FC<Props> = ({
         fecha: Timestamp.fromDate(fechaDate),
         duracionMinutos: form.duracionMinutos,
         box: form.box as Cita['box'],
-        estado: (citaEditar?.estado ?? 'confirmada') as EstadoCita,
+        estado: form.estado,
         notas: form.notas,
         creadoPor: user?.rut ?? 'sistema',
         visiblePaciente: form.visiblePaciente,
@@ -438,16 +440,32 @@ export const ModalNuevaCita: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Notas */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Notas internas</label>
-            <textarea
-              value={form.notas}
-              onChange={e => set({ notas: e.target.value })}
-              rows={3}
-              placeholder="Notas visibles solo para el equipo interno..."
-              className={`${inputCls} resize-none`}
-            />
+          {/* Estado y Notas */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Estado</label>
+              <select
+                value={form.estado}
+                onChange={e => set({ estado: e.target.value as EstadoCita })}
+                className={selectCls}
+              >
+                <option value="solicitada" className="bg-[#1e293b] text-slate-200">Solicitada</option>
+                <option value="confirmada" className="bg-[#1e293b] text-slate-200">Confirmada</option>
+                <option value="realizada" className="bg-[#1e293b] text-slate-200">Realizada</option>
+                <option value="cancelada" className="bg-[#1e293b] text-slate-200">Cancelada</option>
+                <option value="no_asistio" className="bg-[#1e293b] text-slate-200">No asistió</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">Notas internas</label>
+              <textarea
+                value={form.notas}
+                onChange={e => set({ notas: e.target.value })}
+                rows={1}
+                placeholder="Notas internas..."
+                className={`${inputCls} resize-none`}
+              />
+            </div>
           </div>
 
           {/* Visible paciente */}

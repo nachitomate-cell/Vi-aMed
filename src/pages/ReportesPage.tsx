@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Cita } from '../types/agenda';
+import * as XLSX from 'xlsx';
 
 type Period = 'dia' | 'semana' | 'mes';
 
@@ -80,6 +81,23 @@ const ReportesPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportExcel = () => {
+    const data = citas.map(c => ({
+      Fecha: c.fecha.toDate().toLocaleDateString('es-CL'),
+      Paciente: c.pacienteNombre,
+      'Tipo de examen': c.tipoAtencion,
+      'Box / Sala': c.box,
+      Estado: c.estado === 'realizada' ? 'Fin de atención' : 'En proceso'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte");
+    
+    // Generar archivo y descargar
+    XLSX.writeFile(workbook, `reporte-vinamed-${period}.xlsx`);
+  };
+
   return (
     <div className="p-5 space-y-5">
       <div className="flex justify-between items-start">
@@ -138,6 +156,16 @@ const ReportesPage: React.FC = () => {
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
           </svg>
           Descargar CSV
+        </button>
+        <button
+          onClick={exportExcel}
+          disabled={citas.length === 0}
+          className="flex items-center gap-2 bg-[#1D6F42] hover:bg-[#185c37] disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
+          </svg>
+          Descargar Excel
         </button>
         <button
           onClick={() => window.print()}

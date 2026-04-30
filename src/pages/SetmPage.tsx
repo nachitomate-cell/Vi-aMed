@@ -28,12 +28,12 @@ const TIPOS_EXAMEN = [
 const LABS = ['Diagnomed', 'Etcheverry Lab', 'Laboclin', 'Bionet', 'Endoclin'];
 
 const TIPO_CARDS = [
-  { icon: '🩸', name: 'Hemograma', desc: 'Sangre venosa · EDTA' },
-  { icon: '🧪', name: 'Bioquímica', desc: 'Glucosa, perfil lipídico, hepático' },
-  { icon: '💛', name: 'Orina completa', desc: 'Muestra de orina · Frasco estéril' },
-  { icon: '🔬', name: 'Cultivo', desc: 'Urocultivo, coprocultivo, frotis' },
-  { icon: '🧫', name: 'Serología', desc: 'VIH, hepatitis, VDRL' },
-  { icon: '➕', name: 'Otro', desc: 'Examen personalizado' },
+  { icon: <svg className="w-7 h-7 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.5c-3.31 0-6-2.69-6-6 0-3.31 6-12.5 6-12.5s6 9.19 6 12.5c0 3.31-2.69 6-6 6z"/></svg>, name: 'Hemograma', desc: 'Sangre venosa · EDTA' },
+  { icon: <svg className="w-7 h-7 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>, name: 'Bioquímica', desc: 'Glucosa, perfil lipídico, hepático' },
+  { icon: <svg className="w-7 h-7 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6"/><path d="M10 3v4l-3 4v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V11l-3-4V3"/><path d="M7 16h10"/></svg>, name: 'Orina completa', desc: 'Muestra de orina · Frasco estéril' },
+  { icon: <svg className="w-7 h-7 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>, name: 'Cultivo', desc: 'Urocultivo, coprocultivo, frotis' },
+  { icon: <svg className="w-7 h-7 text-cyan-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, name: 'Serología', desc: 'VIH, hepatitis, VDRL' },
+  { icon: <svg className="w-7 h-7 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>, name: 'Otro', desc: 'Examen personalizado' },
 ];
 
 const LAB_STATUS = [
@@ -108,7 +108,7 @@ const SetmPage: React.FC = () => {
               onClick={() => openModal(tc.name)}
               className="bg-white border border-slate-200 shadow-sm rounded-xl p-3 text-left hover:border-[#0E7490]/40 transition-colors"
             >
-              <div className="text-2xl mb-2">{tc.icon}</div>
+              <div className="w-10 h-10 flex items-center justify-center mb-2">{tc.icon}</div>
               <div className="text-sm font-medium text-slate-800">{tc.name}</div>
               <div className="text-xs text-slate-500 mt-0.5">{tc.desc}</div>
             </button>
@@ -164,7 +164,14 @@ const SetmPage: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
-            <h3 className="font-bold text-slate-800 text-lg">🧪 Nueva Orden de Muestra</h3>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-8 h-8 bg-[#0E7490]/10 rounded-xl flex items-center justify-center">
+                <svg className="w-4 h-4 text-[#0E7490]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/>
+                </svg>
+              </div>
+              <h3 className="font-bold text-slate-800 text-lg">Nueva Orden de Muestra</h3>
+            </div>
             <ModalField label="Paciente *">
               <input value={form.nombre} onChange={e => set('nombre', e.target.value)} placeholder="Nombre del paciente" />
             </ModalField>
