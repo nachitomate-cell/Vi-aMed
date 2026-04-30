@@ -35,7 +35,11 @@ const AtencionPage: React.FC = () => {
   });
   
   const [datosAtencion, setDatosAtencion] = useState({
-    fecha: '', hora: '', metodoPago: '', nroOperacion: '', estado: ''
+    fecha: new Date().toISOString().split('T')[0], 
+    hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }), 
+    metodoPago: '', 
+    nroOperacion: '', 
+    estado: 'Agendado'
   });
 
   // Campos para nueva prestación
@@ -144,8 +148,8 @@ const AtencionPage: React.FC = () => {
       </p>
 
       {showError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-semibold">
-          FORMULARIO INVÁLIDO (si no se completaron todos los datos)
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-bold animate-pulse">
+          FORMULARIO INVÁLIDO
         </div>
       )}
 
@@ -225,7 +229,7 @@ const AtencionPage: React.FC = () => {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-slate-500 mb-1">Previsión o convenio</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Previsión o convenio *</label>
             <select 
               value={paciente.prevision} onChange={e => setPaciente({...paciente, prevision: e.target.value})}
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
@@ -251,9 +255,10 @@ const AtencionPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Hora de atención (hh:mm) *</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Hora de atención * Formato hh:mm (incluir ' : ')</label>
             <input 
-              type="time"
+              type="text"
+              placeholder="Ej: 22:48"
               value={datosAtencion.hora} onChange={e => setDatosAtencion({...datosAtencion, hora: e.target.value})}
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
             />
@@ -272,6 +277,7 @@ const AtencionPage: React.FC = () => {
             <label className="block text-xs font-medium text-slate-500 mb-1">Número de operación o transferencia</label>
             <input 
               value={datosAtencion.nroOperacion} onChange={e => setDatosAtencion({...datosAtencion, nroOperacion: e.target.value})}
+              placeholder="Ingrese N°"
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
             />
           </div>
@@ -329,7 +335,7 @@ const AtencionPage: React.FC = () => {
         
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end mt-4">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Cantidad</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Cantidad * (Sin puntos)</label>
             <input 
               type="number"
               value={nuevaPrestacion.cantidad} onChange={e => setNuevaPrestacion({...nuevaPrestacion, cantidad: Number(e.target.value)})}
@@ -378,27 +384,32 @@ const AtencionPage: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA PRESTACIONES */}
-      {prestaciones.length > 0 && (
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-slate-200">
-            <h3 className="font-semibold text-slate-800">Prestaciones ({prestaciones.length})</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-slate-200">
+          <h3 className="font-semibold text-slate-800">Prestaciones</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+              <tr>
+                <th className="px-6 py-3">Prestación</th>
+                <th className="px-6 py-3">Profesional</th>
+                <th className="px-6 py-3">Cantidad</th>
+                <th className="px-6 py-3">Valor</th>
+                <th className="px-6 py-3">Copago</th>
+                <th className="px-6 py-3">Bono complementario</th>
+                <th className="px-6 py-3">Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {prestaciones.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-3">Prestación</th>
-                  <th className="px-6 py-3">Profesional</th>
-                  <th className="px-6 py-3">Cantidad</th>
-                  <th className="px-6 py-3">Valor</th>
-                  <th className="px-6 py-3">Copago</th>
-                  <th className="px-6 py-3">Bono comp.</th>
-                  <th className="px-6 py-3">Observaciones</th>
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-400 italic">
+                    Sin registros
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {prestaciones.map((p, i) => (
+              ) : (
+                prestaciones.map((p, i) => (
                   <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                     <td className="px-6 py-4 font-medium text-slate-800">{p.prestacion} <span className="text-xs text-slate-400 block">{p.especialidad}</span></td>
                     <td className="px-6 py-4">{p.profesional}</td>
@@ -408,12 +419,12 @@ const AtencionPage: React.FC = () => {
                     <td className="px-6 py-4">${p.bonoComplementario}</td>
                     <td className="px-6 py-4 text-xs text-slate-500">{p.observaciones}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* ACCIONES FINALES */}
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">

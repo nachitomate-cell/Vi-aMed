@@ -170,6 +170,15 @@ const RecepcionPage: React.FC = () => {
             {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
           </div>
           <button
+            onClick={() => navigate('/atencion')}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Nueva Atención
+          </button>
+          <button
             onClick={() => navigate('/nuevopaciente', { state: { from: '/recepcion' } })}
             className="flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
           >
