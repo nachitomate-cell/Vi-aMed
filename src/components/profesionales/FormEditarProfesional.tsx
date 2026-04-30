@@ -40,7 +40,7 @@ export const FormEditarProfesional: React.FC<Props> = ({ profesional, onActualiz
     form.apellidoMaterno?.trim() && 
     form.telefono?.trim() && 
     form.especialidad?.trim() && 
-    form.comision !== undefined && form.comision !== null && form.comision !== '' &&
+    form.comision !== undefined && form.comision !== null &&
     form.activo !== undefined;
 
   const handleGuardar = async () => {

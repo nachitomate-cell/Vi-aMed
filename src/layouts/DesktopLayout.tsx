@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -44,6 +44,7 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const DesktopLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [supportOpen, setSupportOpen] = React.useState(false);
   const saludo = useMemo(getSaludo, []);
@@ -492,6 +493,34 @@ const DesktopLayout: React.FC = () => {
                         </span>
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => { navigate('/contraseña'); setProfileOpen(false); }}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#F1F5F9',
+                        color: '#475569',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        transition: 'all 0.15s',
+                        marginBottom: 8,
+                      }}
+                      onMouseOver={e => (e.currentTarget.style.background = '#E2E8F0')}
+                      onMouseOut={e => (e.currentTarget.style.background = '#F1F5F9')}
+                    >
+                      <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                      Cambiar contraseña
+                    </button>
 
                     <button
                       onClick={handleLogout}

@@ -5,7 +5,7 @@ import {
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import type { EstadoCita } from '../types/agenda';
-import { ESTADO_LABELS, ESTADO_COLORS } from '../types/agenda';
+
 
 /* ── Types ─────────────────────────────────────────────── */
 interface RegistroRecepcion {

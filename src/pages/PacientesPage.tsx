@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { Cita } from '../types/agenda'; // Intentamos usar el tipo existente si es posible
+
 
 // Si no existe, usamos esta interfaz adaptada a lo solicitado:
 interface AtencionRegistro {

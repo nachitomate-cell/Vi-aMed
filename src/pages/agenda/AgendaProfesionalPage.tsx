@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAgendaColumnas } from '../../hooks/useAgendaColumnas';
-import { getProfesionales, actualizarEstadoCita } from '../../services/agendaService';
+import { getProfesionales } from '../../services/agendaService';
 import { ModalNuevaCita } from '../../components/agenda/ModalNuevaCita';
 import type { Cita, Profesional } from '../../types/agenda';
 import { ESTADO_LABELS } from '../../types/agenda';

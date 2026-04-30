@@ -51,7 +51,7 @@ const AtencionPage: React.FC = () => {
   // Autocomplete paciente
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PacienteData[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+
   
   const { opciones } = useGestionDatos();
 

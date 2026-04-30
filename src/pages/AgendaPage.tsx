@@ -34,7 +34,7 @@ const AgendaPage: React.FC = () => {
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [tiposAtencion, setTiposAtencion] = useState<string[]>([]);
   const [horaPreseleccionada, setHoraPreseleccionada] = useState<string | undefined>();
-  const [reloadKey, setReloadKey] = useState(0);
+
 
   /* Filtros */
   const [filProfesional, setFilProfesional] = useState('');

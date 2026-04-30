@@ -37,6 +37,7 @@ interface FormData {
   notas: string;
   prestacion?: string; // Nuevo campo opcional
   estado: EstadoCita;
+  visiblePaciente: boolean;
 }
 
 function buildForm(fecha?: Date, cita?: Cita): FormData {
