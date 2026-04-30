@@ -236,7 +236,7 @@ const AgendaPage: React.FC = () => {
               <div />
               <div className="flex gap-2">
                 <button
-                  onClick={() => setReloadKey(k => k + 1)}
+                  onClick={() => {}}
                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-[#0E7490] text-slate-500 hover:text-[#0E7490] text-xs font-semibold rounded-xl transition-all shadow-sm"
                   title="Recargar agenda"
                 >

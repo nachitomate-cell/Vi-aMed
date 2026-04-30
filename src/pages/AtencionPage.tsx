@@ -62,7 +62,7 @@ const AtencionPage: React.FC = () => {
         setSearchResults([]);
         return;
       }
-      setIsSearching(true);
+
       try {
         const q = query(
           collection(db, 'pacientes'),
@@ -82,7 +82,7 @@ const AtencionPage: React.FC = () => {
       } catch (error) {
         console.error('Error buscando pacientes', error);
       }
-      setIsSearching(false);
+
     };
 
     const debounce = setTimeout(fetchPacientes, 500);
