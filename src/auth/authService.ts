@@ -1,4 +1,5 @@
 import type { AuthUser } from '../types/eco-mobile';
+import { normalizarRut } from '../utils/rut';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Contrato de respuesta del backend.
@@ -60,11 +61,12 @@ const ROL_MAP: Record<string, string> = {
   secretaria: 'SECRETARIA'
 };
 
+
 export async function loginWithCredentials(rut: string, password: string): Promise<LoginResponse> {
   try {
     // 1. Buscar al profesional por RUT para obtener su email
-    // Nota: Ahora las reglas de Firestore permiten lectura pública de 'profesionales'
-    const q = query(collection(dbVinamed, 'profesionales'), where('rut', '==', rut));
+    const rutNormalizado = normalizarRut(rut);
+    const q = query(collection(dbVinamed, 'profesionales'), where('rut', '==', rutNormalizado));
     const snap = await getDocs(q);
 
     if (snap.empty) {
