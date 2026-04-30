@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { authVinamed } from '../lib/firebase';
 
 const CambiarContrasenaPage: React.FC = () => {
   const navigate = useNavigate();
-  const auth = getAuth();
-  const user = auth.currentUser;
+  const user = authVinamed.currentUser;
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
