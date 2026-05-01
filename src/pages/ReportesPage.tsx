@@ -63,12 +63,12 @@ const ReportesPage: React.FC = () => {
 
   const total = citas.length;
   const eco = citas.filter(c => 
-    c.prestaciones?.some(p => p.especialidad === 'Ecografia')
+    c.prestaciones?.some((p: any) => p.especialidad === 'Ecografia')
   ).length;
   const medicina = citas.filter(c => 
-    c.prestaciones?.some(p => p.especialidad === 'Medicina')
+    c.prestaciones?.some((p: any) => p.especialidad === 'Medicina')
   ).length;
-  const fin = citas.filter(c => c.estado === 'Finalizado').length;
+  const fin = citas.filter(c => c.estado === 'finalizado' || c.estado === 'realizada').length;
 
   const exportCSV = () => {
     const header = 'Fecha,Paciente,Tipo de examen,Box / Sala,Estado\n';
@@ -91,8 +91,8 @@ const ReportesPage: React.FC = () => {
     const data = citas.map(c => ({
       Fecha: c.fecha.toDate().toLocaleDateString('es-CL'),
       Paciente: c.pacienteNombre,
-      'Prestaciones': c.prestaciones?.map(p => p.prestacion).join(', ') || 'Sin registro',
-      'Especialidades': c.prestaciones?.map(p => p.especialidad).join(', ') || '—',
+      'Prestaciones': c.prestaciones?.map((p: any) => p.prestacion).join(', ') || 'Sin registro',
+      'Especialidades': c.prestaciones?.map((p: any) => p.especialidad).join(', ') || '—',
       Estado: c.estado
     }));
 
@@ -222,17 +222,17 @@ const ReportesPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       <div className="flex flex-col gap-0.5">
-                        {c.prestaciones?.map((p, i) => (
+                        {c.prestaciones?.map((p: any, i: number) => (
                           <span key={i} className="text-xs font-medium">{p.prestacion}</span>
                         ))}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">
-                      {c.prestaciones?.map(p => p.especialidad).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
+                      {c.prestaciones?.map((p: any) => p.especialidad).filter((v: any, i: number, a: any[]) => a.indexOf(v) === i).join(', ')}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-bold border px-2.5 py-0.5 rounded-full uppercase ${
-                        c.estado === 'Finalizado'
+                        (c.estado === 'finalizado' || c.estado === 'realizada')
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-[#0E7490]/10 text-[#0E7490] border-[#0E7490]/25'
                       }`}>

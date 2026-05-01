@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, doc, getDoc, updateDoc, setDoc, serverTimestamp, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, setDoc, serverTimestamp, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface Cita {

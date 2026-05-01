@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type EstadoCita = 'solicitada' | 'confirmada' | 'realizada' | 'cancelada' | 'no_asistio';
+export type EstadoCita = 'solicitada' | 'confirmada' | 'realizada' | 'cancelada' | 'no_asistio' | 'atendido' | 'finalizado';
 export type RolProfesional = 'medico' | 'tecnologo' | 'enfermero' | 'secretaria' | 'admin';
 
 export const BOXES = ['Box 1', 'Box 2', 'Sala de procedimientos', 'Sala de espera'] as const;
@@ -52,6 +52,12 @@ export interface Cita {
   visiblePaciente: boolean;
   origenCita?: string;
   informeId?: string;
+  prestaciones?: Array<{
+    prestacion: string;
+    especialidad: string;
+    prevision?: string;
+  }>;
+  prevision?: string;
 }
 
 export interface Profesional {

@@ -31,17 +31,11 @@ export const ModalAgregarProfesional: React.FC<Props> = ({ onCreado, onCerrar })
     activo: true,
   });
 
-  const isValid = 
-    form.rut?.trim() && 
-    form.nombre?.trim() && 
-    form.especialidad?.trim() && 
-    form.activo !== undefined;
-
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { opciones } = useGestionDatos();
 
-  const set = (field: string, value: string | boolean) =>
+  const set = (field: string, value: string | boolean | number) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
   const handleCrear = async () => {
