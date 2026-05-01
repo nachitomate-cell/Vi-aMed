@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, onSnapshot } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import type { Profesional, Cita } from '../../types/agenda';
 import { getProfesionales } from '../../services/profesionalesService';
 import { TarjetaProfesional } from '../../components/profesionales/TarjetaProfesional';
-import { ModalAgregarProfesional } from '../../components/profesionales/ModalAgregarProfesional';
 
 const ProfesionalesPage: React.FC = () => {
+  const navigate = useNavigate();
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [conteos, setConteos] = useState<Record<string, { total: number; mes: number }>>({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [modalAbierto, setModalAbierto] = useState(false);
-
   const cargarProfesionales = () => {
     setError(null);
     getProfesionales().then(data => {
@@ -82,7 +81,7 @@ const ProfesionalesPage: React.FC = () => {
           )}
         </div>
         <button
-          onClick={() => setModalAbierto(true)}
+          onClick={() => navigate('/nuevo-profesional')}
           className="flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -148,13 +147,6 @@ const ProfesionalesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal agregar */}
-      {modalAbierto && (
-        <ModalAgregarProfesional
-          onCreado={() => { setModalAbierto(false); cargarProfesionales(); }}
-          onCerrar={() => setModalAbierto(false)}
-        />
-      )}
     </div>
   );
 };

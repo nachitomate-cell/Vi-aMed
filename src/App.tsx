@@ -28,6 +28,7 @@ import ValidarInformePage from './pages/ValidarInformePage';
 import GestionFinancieraPage from './pages/GestionFinancieraPage';
 import ProfesionalesPage from './pages/profesionales/ProfesionalesPage';
 import ProfesionalPerfilPage from './pages/profesionales/ProfesionalPerfilPage';
+import NuevoProfesionalPage from './pages/profesionales/NuevoProfesionalPage';
 import RecepcionPage from './pages/RecepcionPage';
 import AgendaProfesionalPage from './pages/agenda/AgendaProfesionalPage';
 import PacienteDetallePage from './pages/PacienteDetallePage';
@@ -110,6 +111,7 @@ const AppRoutes: React.FC = () => (
       <Route path="atencion/:atencionId" element={<AtencionPage />} />
       <Route path="profesionales" element={<ProfesionalesPage />} />
       <Route path="profesionales/:profesionalId" element={<ProfesionalPerfilPage />} />
+      <Route path="nuevo-profesional" element={<NuevoProfesionalPage />} />
       {/* <Route
         path="mamografia"
         element={
