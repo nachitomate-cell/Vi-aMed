@@ -8,6 +8,8 @@ import type { EstadoCita } from '../types/agenda';
 import ModalOrdenPago from '../components/recepcion/ModalOrdenPago';
 
 
+import { ESTADO_COLORS, ESTADO_LABELS } from '../types/agenda';
+
 /* ── Types ─────────────────────────────────────────────── */
 interface RegistroRecepcion {
   id: string;
@@ -20,30 +22,11 @@ interface RegistroRecepcion {
   box: string;
   nOperacion?: string;
   notas?: string;
+  ordenPagoGenerada?: boolean;
 }
 
 /* ── Constantes ─────────────────────────────────────────── */
-const ESTADOS_OPCIONES: EstadoCita[] = ['solicitada', 'confirmada', 'realizada', 'cancelada', 'no_asistio', 'atendido', 'finalizado'];
-
-const ESTADO_BG: Record<EstadoCita, string> = {
-  solicitada:  'bg-amber-50 text-amber-700 border-amber-200',
-  confirmada:  'bg-cyan-50 text-cyan-700 border-cyan-200',
-  realizada:   'bg-emerald-50 text-emerald-700 border-emerald-200',
-  cancelada:   'bg-red-50 text-red-700 border-red-200',
-  no_asistio:  'bg-orange-50 text-orange-700 border-orange-200',
-  atendido:    'bg-emerald-100 text-emerald-800 border-emerald-300',
-  finalizado:  'bg-emerald-200 text-emerald-900 border-emerald-400',
-};
-
-const ESTADO_NAMES: Record<EstadoCita, string> = {
-  solicitada: 'Solicitada',
-  confirmada: 'Confirmada',
-  realizada:  'Realizada',
-  cancelada:  'Cancelada',
-  no_asistio: 'No asistió',
-  atendido:   'Atendido',
-  finalizado: 'Finalizado',
-};
+const ESTADOS_OPCIONES: EstadoCita[] = ['Agendado', 'Confirmado', 'En espera', 'En atención', 'Rezagado', 'Finalizado', 'Anulado', 'No asistió'];
 
 /* ── Selector de estado inline ─────────────────────────── */
 const SelectorEstado: React.FC<{
@@ -54,25 +37,39 @@ const SelectorEstado: React.FC<{
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${ESTADO_BG[value]}`}
+        onClick={(e) => {
+          e.stopPropagation(); // Evitar que el clic en el botón active el edit del paciente
+          setOpen(o => !o);
+        }}
+        className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all duration-200 shadow-sm ${ESTADO_COLORS[value] || 'bg-slate-100'}`}
       >
-        {ESTADO_NAMES[value]}
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+        {ESTADO_LABELS[value] || value}
+        <svg className={`w-3 h-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden min-w-[140px]">
+          <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-20 overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-200 p-1.5">
+            <div className="px-2 py-1.5 mb-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cambiar estado</span>
+            </div>
             {ESTADOS_OPCIONES.map(est => (
               <button
                 key={est}
-                onClick={() => { onChange(est); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs font-semibold hover:bg-slate-50 transition-colors ${value === est ? 'text-[#0E7490]' : 'text-slate-600'}`}
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  onChange(est); 
+                  setOpen(false); 
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-3 mb-0.5 last:mb-0 ${
+                  value === est ? 'bg-slate-50 text-[#0E7490]' : 'text-slate-600 hover:bg-slate-50'
+                }`}
               >
-                {ESTADO_NAMES[est]}
+                <div className={`w-2 h-2 rounded-full ${ESTADO_COLORS[est].split(' ')[1].replace('text-', 'bg-')}`} />
+                {ESTADO_LABELS[est]}
               </button>
             ))}
           </div>
@@ -137,6 +134,7 @@ const RecepcionPage: React.FC = () => {
         box: d.data().box ?? '',
         nOperacion: d.data().nOperacion ?? '',
         notas: d.data().notas ?? '',
+        ordenPagoGenerada: d.data().ordenPagoGenerada ?? false,
       } as RegistroRecepcion));
       setRegistros(data);
       setLoading(false);
@@ -324,32 +322,46 @@ const RecepcionPage: React.FC = () => {
         ) : (
           <div className="divide-y divide-slate-100">
             {ordenados.map(r => (
-              <div key={r.id} className="grid grid-cols-12 px-5 py-3.5 hover:bg-slate-50/70 transition-colors group items-center">
+              <div 
+                key={r.id} 
+                onClick={() => navigate(`/atencion/${r.id}`)}
+                className="grid grid-cols-12 px-5 py-3.5 hover:bg-slate-50/70 transition-all group items-center cursor-pointer border-l-4 border-l-transparent hover:border-l-[#0E7490]"
+              >
                 {/* Paciente */}
                 <div className="col-span-3 min-w-0 pr-3">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{r.pacienteNombre}</p>
-                  <p className="text-[11px] text-slate-400 font-mono">{r.pacienteRut}</p>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">{r.tipoAtencion}</p>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-bold text-slate-800 truncate group-hover:text-[#0E7490] transition-colors">{r.pacienteNombre}</p>
+                    <p className="text-[11px] text-slate-400 font-mono tracking-tighter">{r.pacienteRut}</p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium truncate">{r.tipoAtencion}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Fecha */}
                 <div className="col-span-2">
-                  <p className="text-sm text-slate-700">{formatFecha(r.fecha)}</p>
-                  <p className="text-[11px] text-slate-400">{r.profesionalNombre || '—'}</p>
+                  <p className="text-sm text-slate-700 font-medium">{formatFecha(r.fecha)}</p>
+                  <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    {r.profesionalNombre || '—'}
+                  </p>
                 </div>
 
                 {/* Hora */}
                 <div className="col-span-1">
-                  <p className="text-sm font-mono text-slate-700">{formatHora(r.fecha)}</p>
+                  <p className="text-sm font-bold text-slate-700">{formatHora(r.fecha)}</p>
                   <p className="text-[10px] text-slate-400">{r.box || '—'}</p>
                 </div>
 
                 {/* N° Operación */}
                 <div className="col-span-2">
                   {r.nOperacion ? (
-                    <p className="text-sm font-mono text-slate-700">{r.nOperacion}</p>
+                    <div className="flex items-center gap-2 text-[#0E7490]">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <p className="text-sm font-mono font-bold tracking-tight">{r.nOperacion}</p>
+                    </div>
                   ) : (
-                    <span className="text-[11px] text-slate-300 italic">Sin registro</span>
+                    <span className="text-[11px] text-slate-300 italic">Pendiente</span>
                   )}
                 </div>
 
@@ -363,36 +375,29 @@ const RecepcionPage: React.FC = () => {
 
                 {/* Acciones */}
                 <div className="col-span-2 flex justify-end items-center gap-1">
-                  {/* Editar */}
-                  <button
-                    onClick={() => navigate(`/atencion/${r.id}`)}
-                    title="Editar"
-                    className="p-2 rounded-xl text-slate-400 hover:text-[#0E7490] hover:bg-[#0E7490]/10 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  </button>
-
                   {/* Orden de pago */}
-                  <button
-                    onClick={() => setOrdenPagoRegistro(r)}
-                    title="Orden de pago"
-                    className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <rect x="2" y="5" width="20" height="14" rx="2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 10h20" />
-                    </svg>
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOrdenPagoRegistro(r); }}
+                      title={r.ordenPagoGenerada ? 'Orden de pago generada' : 'Ver Orden de Pago'}
+                      className={`p-2.5 rounded-xl transition-all ${r.ordenPagoGenerada ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </button>
+                    {r.ordenPagoGenerada && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+                    )}
+                  </div>
 
                   {/* Eliminar */}
                   <button
-                    onClick={() => handleEliminar(r.id, r.pacienteNombre)}
-                    title="Eliminar"
-                    className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleEliminar(r.id, r.pacienteNombre); }}
+                    title="Eliminar Registro"
+                    className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>

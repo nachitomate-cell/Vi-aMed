@@ -1,8 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import React, { useState, useEffect } from 'react';
 import type { Timestamp } from 'firebase/firestore';
-import { getDoc, doc } from 'firebase/firestore';
+import { getDoc, doc, addDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
 interface Prestacion {
@@ -101,7 +99,6 @@ const S = {
 };
 
 const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) => {
-  const printRef = useRef<HTMLDivElement>(null);
   const [cargando, setCargando] = useState(false);
   const [datosCompletos, setDatosCompletos] = useState<OrdenData | null>(null);
   const [cargandoDatos, setCargandoDatos] = useState(true);
@@ -161,24 +158,83 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
 
   /* ── Descargar PDF ──────────────────────────────────────── */
   const handleDescargarPDF = async () => {
-    if (!printRef.current) return;
     setCargando(true);
     try {
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
+      const prestacionesPayload = prestaciones.map(p => {
+        const exento = p.exento ?? p.valor ?? 0;
+        const afecto = p.afecto ?? 0;
+        const iva    = p.iva ?? 0;
+        const nombre = p.descripcion || p.nombre || p.prestacion || '';
+        return {
+          codigo:      p.codigo ?? '',
+          descripcion: nombre.toUpperCase(),
+          cantidad:    1,
+          exento,
+          afecto,
+          iva,
+          total: exento + afecto + iva,
+        };
       });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`orden_pago_${datos?.pacienteRut ?? 'paciente'}.pdf`);
-    } catch (e) {
-      console.error(e);
+
+      const res = await fetch('/api/orden-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          centroMedico:        'Viñamed',
+          fechaEmision:        hoy,
+          tipoAtencion:        datos?.tipoAtencion || 'Ambulatoria',
+          nombreApellidos:     datos?.pacienteNombre || '',
+          run:                 datos?.pacienteRut || '',
+          fechaNacimiento:     datos?.pacienteFechaNacimiento || '',
+          edad:                datos?.pacienteFechaNacimiento
+                                 ? String(calcularEdad(datos.pacienteFechaNacimiento))
+                                 : '',
+          sexo:                sexoLabel(datos?.pacienteSexo),
+          telefono:            datos?.pacienteTelefono || '',
+          fechaIngreso,
+          fechaEmisionDetalle: hoy,
+          prestaciones:        prestacionesPayload,
+          metodoPago:          datos?.metodoPago || '',
+          nroOperacion:        datos?.nOperacion || '',
+        }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `OrdenPago_${datos?.pacienteRut ?? 'paciente'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Guardar registro en Firestore
+      const total = prestaciones.reduce((acc, p) => {
+        return acc + (p.exento ?? p.valor ?? 0) + (p.afecto ?? 0) + (p.iva ?? 0);
+      }, 0);
+      await Promise.all([
+        addDoc(collection(db, 'ordenes_pago'), {
+          citaId:          registro.id,
+          pacienteNombre:  datos?.pacienteNombre ?? '',
+          pacienteRut:     datos?.pacienteRut ?? '',
+          metodoPago:      datos?.metodoPago ?? '',
+          nOperacion:      datos?.nOperacion ?? '',
+          prestaciones:    prestaciones,
+          total,
+          generadoEn:      serverTimestamp(),
+        }),
+        updateDoc(doc(db, 'citas', registro.id), {
+          ordenPagoGenerada: true,
+          fechaOrdenPago:    serverTimestamp(),
+        }),
+      ]);
+    } catch (err) {
+      console.error('Error generando PDF:', err);
+      alert('No se pudo generar el PDF');
+    } finally {
+      setCargando(false);
     }
-    setCargando(false);
   };
 
   const handleImprimir = () => window.print();
@@ -238,7 +294,6 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
           ) : (
             /* ─── DOCUMENTO A4 ──────────────────────────────── */
             <div
-              ref={printRef}
               className="bg-white mx-auto shadow-lg"
               style={{
                 width: '297mm',
