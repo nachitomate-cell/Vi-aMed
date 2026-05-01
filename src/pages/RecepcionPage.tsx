@@ -23,7 +23,7 @@ interface RegistroRecepcion {
 }
 
 /* ── Constantes ─────────────────────────────────────────── */
-const ESTADOS_OPCIONES: EstadoCita[] = ['solicitada', 'confirmada', 'realizada', 'cancelada', 'no_asistio'];
+const ESTADOS_OPCIONES: EstadoCita[] = ['solicitada', 'confirmada', 'realizada', 'cancelada', 'no_asistio', 'atendido', 'finalizado'];
 
 const ESTADO_BG: Record<EstadoCita, string> = {
   solicitada:  'bg-amber-50 text-amber-700 border-amber-200',
@@ -31,6 +31,8 @@ const ESTADO_BG: Record<EstadoCita, string> = {
   realizada:   'bg-emerald-50 text-emerald-700 border-emerald-200',
   cancelada:   'bg-red-50 text-red-700 border-red-200',
   no_asistio:  'bg-orange-50 text-orange-700 border-orange-200',
+  atendido:    'bg-emerald-100 text-emerald-800 border-emerald-300',
+  finalizado:  'bg-emerald-200 text-emerald-900 border-emerald-400',
 };
 
 const ESTADO_NAMES: Record<EstadoCita, string> = {
@@ -39,6 +41,8 @@ const ESTADO_NAMES: Record<EstadoCita, string> = {
   realizada:  'Realizada',
   cancelada:  'Cancelada',
   no_asistio: 'No asistió',
+  atendido:   'Atendido',
+  finalizado: 'Finalizado',
 };
 
 /* ── Selector de estado inline ─────────────────────────── */

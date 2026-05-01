@@ -14,6 +14,8 @@ export const ESTADO_LABELS: Record<EstadoCita, string> = {
   realizada: 'Realizada',
   cancelada: 'Rechazada',
   no_asistio: 'Ausente',
+  atendido: 'Atendido',
+  finalizado: 'Finalizado',
 };
 
 export const ESTADO_COLORS: Record<EstadoCita, string> = {
@@ -22,6 +24,8 @@ export const ESTADO_COLORS: Record<EstadoCita, string> = {
   realizada: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
   cancelada: 'bg-red-500/15 text-red-400 border-red-500/30',
   no_asistio: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  atendido: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  finalizado: 'bg-emerald-600/15 text-emerald-500 border-emerald-600/30',
 };
 
 export const ESTADO_BORDER: Record<EstadoCita, string> = {
@@ -30,6 +34,8 @@ export const ESTADO_BORDER: Record<EstadoCita, string> = {
   realizada: 'border-l-slate-500',
   cancelada: 'border-l-red-500',
   no_asistio: 'border-l-orange-500',
+  atendido: 'border-l-emerald-500',
+  finalizado: 'border-l-emerald-600',
 };
 
 export interface Cita {
