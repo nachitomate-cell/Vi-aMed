@@ -23,6 +23,9 @@ import NuevoPacientePage from './pages/NuevoPacientePage';
 import AgendaPage from './pages/AgendaPage';
 import PacientesPage from './pages/PacientesPage';
 import AtencionPage from './pages/AtencionPage';
+import RetirosPage from './pages/RetirosPage';
+import ValidarInformePage from './pages/ValidarInformePage';
+import GestionFinancieraPage from './pages/GestionFinancieraPage';
 import ProfesionalesPage from './pages/profesionales/ProfesionalesPage';
 import ProfesionalPerfilPage from './pages/profesionales/ProfesionalPerfilPage';
 import RecepcionPage from './pages/RecepcionPage';
@@ -90,9 +93,12 @@ const AppRoutes: React.FC = () => (
       <Route path="box-ecografia" element={<BoxEcografiaPage />} />
       <Route path="box-enfermeria" element={<BoxEnfermeriaPage />} />
       <Route path="setm" element={<SetmPage />} />
+      <Route path="retiros" element={<RetirosPage />} />
       <Route path="inventario" element={<InventarioPage />} />
       <Route path="protocolos" element={<ProtocolosPage />} />
       <Route path="reportes" element={<ReportesPage />} />
+      <Route path="validar-informe" element={<ValidarInformePage />} />
+      <Route path="gestion-financiera" element={<GestionFinancieraPage />} />
       <Route path="nuevopaciente" element={<NuevoPacientePage />} />
       <Route path="agenda" element={<AgendaPage />} />
       <Route path="agenda/:profesionalId" element={<AgendaProfesionalPage />} />
@@ -101,6 +107,7 @@ const AppRoutes: React.FC = () => (
       <Route path="pacientes/:pacienteId" element={<PacienteDetallePage />} />
       <Route path="contraseña" element={<CambiarContrasenaPage />} />
       <Route path="atencion" element={<AtencionPage />} />
+      <Route path="atencion/:atencionId" element={<AtencionPage />} />
       <Route path="profesionales" element={<ProfesionalesPage />} />
       <Route path="profesionales/:profesionalId" element={<ProfesionalPerfilPage />} />
       {/* <Route

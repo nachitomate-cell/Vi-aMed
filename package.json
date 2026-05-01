@@ -23,6 +23,7 @@
     "cornerstone-wado-image-loader": "^3.3.2",
     "dicom-parser": "^1.8.21",
     "firebase": "^12.12.1",
+    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "react": "^18.3.1",

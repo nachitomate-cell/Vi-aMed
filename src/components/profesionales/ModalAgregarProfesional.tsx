@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { RolProfesional } from '../../types/agenda';
 import { crearProfesional } from '../../services/profesionalesService';
 import { ColorPicker, COLORES_PREDEFINIDOS } from './ColorPicker';
+import { useGestionDatos } from '../../hooks/useGestionDatos';
 
 interface Props {
   onCreado: () => void;
@@ -18,15 +19,27 @@ const ROLES: { value: RolProfesional; label: string }[] = [
 export const ModalAgregarProfesional: React.FC<Props> = ({ onCreado, onCerrar }) => {
   const [form, setForm] = useState({
     nombre: '',
+    apellidoPaterno: '',
+    apellidoMaterno: '',
     rut: '',
+    telefono: '',
+    comision: 50,
     rol: 'medico' as RolProfesional,
     especialidad: '',
     color: COLORES_PREDEFINIDOS[0],
     email: '',
     activo: true,
   });
+
+  const isValid = 
+    form.rut?.trim() && 
+    form.nombre?.trim() && 
+    form.especialidad?.trim() && 
+    form.activo !== undefined;
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { opciones } = useGestionDatos();
 
   const set = (field: string, value: string | boolean) =>
     setForm(prev => ({ ...prev, [field]: value }));
@@ -76,15 +89,50 @@ export const ModalAgregarProfesional: React.FC<Props> = ({ onCreado, onCerrar })
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">RUT *</label>
-            <input
-              type="text"
-              value={form.rut}
-              onChange={e => set('rut', e.target.value)}
-              placeholder="Ej: 12.345.678-9"
-              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0E7490] transition-colors"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Apellido Paterno</label>
+              <input
+                type="text"
+                value={form.apellidoPaterno}
+                onChange={e => set('apellidoPaterno', e.target.value)}
+                placeholder="Ej: Pérez"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Apellido Materno</label>
+              <input
+                type="text"
+                value={form.apellidoMaterno}
+                onChange={e => set('apellidoMaterno', e.target.value)}
+                placeholder="Ej: Soto"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">RUT *</label>
+              <input
+                type="text"
+                value={form.rut}
+                onChange={e => set('rut', e.target.value)}
+                placeholder="Ej: 12.345.678-9"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Teléfono</label>
+              <input
+                type="tel"
+                value={form.telefono}
+                onChange={e => set('telefono', e.target.value)}
+                placeholder="Ej: 997836861"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] transition-colors"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -100,14 +148,28 @@ export const ModalAgregarProfesional: React.FC<Props> = ({ onCreado, onCerrar })
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">Especialidad</label>
-              <input
-                type="text"
+              <select
                 value={form.especialidad}
                 onChange={e => set('especialidad', e.target.value)}
-                placeholder="Ej: Radiología"
-                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0E7490] transition-colors"
-              />
+                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] appearance-none"
+              >
+                <option value="">Seleccionar...</option>
+                {opciones.especialidades.map(esp => (
+                  <option key={esp} value={esp}>{esp}</option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Comisión (%)</label>
+            <input
+              type="number"
+              value={form.comision}
+              onChange={e => set('comision', Number(e.target.value))}
+              placeholder="Ej: 50"
+              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] transition-colors"
+            />
           </div>
 
           <div>

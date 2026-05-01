@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useGestionDatos } from '../hooks/useGestionDatos';
-import { collection, getDocs, query, where, or } from 'firebase/firestore';
+import { collection, getDocs, getDoc, query, where, or, doc, updateDoc, addDoc, serverTimestamp, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { getProfesionales } from '../services/agendaService';
+import type { Profesional } from '../types/agenda';
 
 interface PacienteData {
   id?: string;
@@ -19,15 +21,17 @@ interface Prestacion {
   especialidad: string;
   profesional: string;
   prestacion: string;
-  cantidad: number;
   valor: number;
   copago: number;
   bonoComplementario: number;
   observaciones: string;
 }
 
+
+
 const AtencionPage: React.FC = () => {
   const navigate = useNavigate();
+  const { atencionId } = useParams();
   
   // Formulario principal
   const [paciente, setPaciente] = useState<PacienteData>({
@@ -44,8 +48,10 @@ const AtencionPage: React.FC = () => {
 
   // Campos para nueva prestación
   const [nuevaPrestacion, setNuevaPrestacion] = useState<Partial<Prestacion>>({
-    especialidad: '', profesional: '', prestacion: '', cantidad: 1, valor: 0, copago: 0, bonoComplementario: 0, observaciones: ''
+    especialidad: '', profesional: '', prestacion: '', valor: 0, copago: 0, bonoComplementario: 0, observaciones: ''
   });
+  
+  const [profesionalesDB, setProfesionalesDB] = useState<Profesional[]>([]);
   
   const [prestaciones, setPrestaciones] = useState<Prestacion[]>([]);
   
@@ -56,8 +62,62 @@ const AtencionPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PacienteData[]>([]);
 
-  
   const { opciones } = useGestionDatos();
+  
+  // Search Prestacion
+  const [prestacionSearch, setPrestacionSearch] = useState('');
+  const [showPrestacionResults, setShowPrestacionResults] = useState(false);
+  const filteredPrestaciones = opciones.prestaciones.filter(p => 
+    p.toLowerCase().includes(prestacionSearch.toLowerCase())
+  );
+
+  // Cargar datos si estamos editando
+  useEffect(() => {
+    if (!atencionId) return;
+
+    const fetchAtencion = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'citas', atencionId));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const fechaObj = data.fecha instanceof Timestamp ? data.fecha.toDate() : new Date(data.fecha);
+          
+          setPaciente({
+            nombre: data.pacienteNombre || '',
+            rut: data.pacienteRut || '',
+            fechaNacimiento: data.pacienteFechaNacimiento || '',
+            sexo: data.pacienteSexo || '',
+            telefono: data.pacienteTelefono || '',
+            correo: data.pacienteCorreo || '',
+            prevision: data.prevision || ''
+          });
+
+          setDatosAtencion({
+            fecha: fechaObj.toISOString().split('T')[0],
+            hora: fechaObj.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+            metodoPago: data.metodoPago || '',
+            nroOperacion: data.nOperacion || '',
+            estado: data.estado || 'Agendado'
+          });
+
+          if (data.prestaciones) {
+            setPrestaciones(data.prestaciones);
+          }
+          
+          setSearchQuery(data.pacienteNombre || '');
+        }
+      } catch (err) {
+        console.error('Error al cargar atención:', err);
+      }
+    };
+
+    fetchAtencion();
+  }, [atencionId]);
+
+  // Cargar profesionales de Firebase
+  useEffect(() => {
+    getProfesionales().then(setProfesionalesDB).catch(console.error);
+  }, []);
 
   // Buscar pacientes en Firestore (mock or real)
   useEffect(() => {
@@ -113,33 +173,91 @@ const AtencionPage: React.FC = () => {
       return;
     }
     setPrestaciones([...prestaciones, nuevaPrestacion as Prestacion]);
-    setNuevaPrestacion({ especialidad: '', profesional: '', prestacion: '', cantidad: 1, valor: 0, copago: 0, bonoComplementario: 0, observaciones: '' });
+    setNuevaPrestacion({ especialidad: '', profesional: '', prestacion: '', valor: 0, copago: 0, bonoComplementario: 0, observaciones: '' });
+    setPrestacionSearch('');
   };
 
-  const handleSubmit = () => {
-    // Validar requeridos basicos (segun los campos en el mock)
-    if (!paciente.nombre || !paciente.rut || !datosAtencion.fecha || !datosAtencion.hora || !datosAtencion.metodoPago || !datosAtencion.estado) {
+  const handleSubmit = async () => {
+    // Validar requeridos basicos
+    if (!paciente.nombre || !paciente.rut || !datosAtencion.fecha || !datosAtencion.hora || !datosAtencion.estado) {
       setShowError(true);
       return;
     }
     setShowError(false);
-    // Aqui iria la logica para guardar
-    alert('Atención guardada correctamente');
-    navigate('/agenda');
+
+    try {
+      const [year, month, day] = datosAtencion.fecha.split('-').map(Number);
+      const [hour, min] = datosAtencion.hora.split(':').map(Number);
+      const fechaCita = new Date(year, month - 1, day, hour, min);
+
+      const payload = {
+        pacienteNombre: paciente.nombre,
+        pacienteRut: paciente.rut,
+        pacienteFechaNacimiento: paciente.fechaNacimiento,
+        pacienteSexo: paciente.sexo,
+        pacienteTelefono: paciente.telefono,
+        pacienteCorreo: paciente.correo,
+        prevision: paciente.prevision,
+        fecha: Timestamp.fromDate(fechaCita),
+        metodoPago: datosAtencion.metodoPago,
+        nOperacion: datosAtencion.nroOperacion,
+        estado: datosAtencion.estado,
+        prestaciones: prestaciones,
+        actualizadoEn: serverTimestamp()
+      };
+
+      // Guardar paciente en la base de datos de pacientes automáticamente
+      const pacientePayload = {
+        nombre: paciente.nombre,
+        rut: paciente.rut,
+        fechaNacimiento: paciente.fechaNacimiento,
+        sexo: paciente.sexo,
+        telefono: paciente.telefono,
+        correo: paciente.correo,
+        prevision: paciente.prevision,
+        actualizadoEn: serverTimestamp()
+      };
+      
+      try {
+        await setDoc(doc(db, 'pacientes', paciente.rut), pacientePayload, { merge: true });
+      } catch (e) {
+        console.error("No se pudo guardar el paciente:", e);
+      }
+
+      if (atencionId) {
+        await updateDoc(doc(db, 'citas', atencionId), payload);
+        alert('Atención actualizada correctamente');
+      } else {
+        await addDoc(collection(db, 'citas'), {
+          ...payload,
+          creadoEn: serverTimestamp()
+        });
+        alert('Atención guardada correctamente');
+      }
+      
+      navigate('/recepcion');
+    } catch (err) {
+      console.error('Error al guardar:', err);
+      alert('Error al guardar la atención');
+    }
   };
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Agregar Atención</h1>
-          <p className="text-sm text-slate-500 mt-1">Ingresa los datos del paciente y de la atención</p>
+          <h1 className="text-2xl font-bold text-slate-800">
+            {atencionId ? `Editar atención ${datosAtencion.fecha.split('-').reverse().join('/')}` : 'Agregar Atención'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {atencionId ? 'Modifica los datos del registro clínico' : 'Ingresa los datos del paciente y de la atención'}
+          </p>
         </div>
         <button
-          onClick={() => navigate('/agenda')}
+          onClick={() => navigate('/recepcion')}
           className="px-4 py-2 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors"
         >
-          Volver a Agenda
+          Volver a Recepción
         </button>
       </div>
 
@@ -255,10 +373,9 @@ const AtencionPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Hora de atención * Formato hh:mm (incluir ' : ')</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Hora de atención *</label>
             <input 
-              type="text"
-              placeholder="Ej: 22:48"
+              type="time"
               value={datosAtencion.hora} onChange={e => setDatosAtencion({...datosAtencion, hora: e.target.value})}
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
             />
@@ -316,32 +433,56 @@ const AtencionPage: React.FC = () => {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Profesional *</label>
-            <input 
-              value={nuevaPrestacion.profesional} onChange={e => setNuevaPrestacion({...nuevaPrestacion, profesional: e.target.value})}
-              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Prestación *</label>
             <select 
-              value={nuevaPrestacion.prestacion} onChange={e => setNuevaPrestacion({...nuevaPrestacion, prestacion: e.target.value})}
+              value={nuevaPrestacion.profesional} onChange={e => setNuevaPrestacion({...nuevaPrestacion, profesional: e.target.value})}
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
             >
               <option value="">Seleccionar...</option>
-              {opciones.prestaciones.map(p => <option key={p} value={p}>{p}</option>)}
+              {profesionalesDB.filter(p => !nuevaPrestacion.especialidad || p.especialidad === nuevaPrestacion.especialidad).map(p => (
+                <option key={p.id} value={p.nombre}>{p.nombre}</option>
+              ))}
             </select>
+          </div>
+          <div className="relative">
+            <label className="block text-xs font-medium text-slate-500 mb-1">Prestación *</label>
+            <input 
+              type="text"
+              placeholder="Buscar prestación..."
+              value={prestacionSearch || nuevaPrestacion.prestacion}
+              onChange={(e) => {
+                setPrestacionSearch(e.target.value);
+                setShowPrestacionResults(true);
+              }}
+              onFocus={() => setShowPrestacionResults(true)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
+              onBlur={() => setTimeout(() => setShowPrestacionResults(false), 200)}
+            />
+            {showPrestacionResults && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto border-t-0 rounded-t-none scrollbar-thin scrollbar-thumb-slate-200">
+                {filteredPrestaciones.length > 0 ? (
+                  filteredPrestaciones.map((p, i) => (
+                    <div 
+                      key={i} 
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setNuevaPrestacion({...nuevaPrestacion, prestacion: p});
+                        setPrestacionSearch(p);
+                        setShowPrestacionResults(false);
+                      }}
+                      className="px-4 py-2.5 hover:bg-[#0E7490]/5 cursor-pointer text-sm text-slate-700 border-b border-slate-50 last:border-0 transition-colors"
+                    >
+                      {p}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-slate-400 italic text-center">No hay resultados</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end mt-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Cantidad * (Sin puntos)</label>
-            <input 
-              type="number"
-              value={nuevaPrestacion.cantidad} onChange={e => setNuevaPrestacion({...nuevaPrestacion, cantidad: Number(e.target.value)})}
-              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
-            />
-          </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Valor</label>
             <input 
@@ -394,7 +535,6 @@ const AtencionPage: React.FC = () => {
               <tr>
                 <th className="px-6 py-3">Prestación</th>
                 <th className="px-6 py-3">Profesional</th>
-                <th className="px-6 py-3">Cantidad</th>
                 <th className="px-6 py-3">Valor</th>
                 <th className="px-6 py-3">Copago</th>
                 <th className="px-6 py-3">Bono complementario</th>
@@ -413,7 +553,6 @@ const AtencionPage: React.FC = () => {
                   <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                     <td className="px-6 py-4 font-medium text-slate-800">{p.prestacion} <span className="text-xs text-slate-400 block">{p.especialidad}</span></td>
                     <td className="px-6 py-4">{p.profesional}</td>
-                    <td className="px-6 py-4">{p.cantidad}</td>
                     <td className="px-6 py-4">${p.valor}</td>
                     <td className="px-6 py-4">${p.copago}</td>
                     <td className="px-6 py-4">${p.bonoComplementario}</td>
@@ -429,7 +568,7 @@ const AtencionPage: React.FC = () => {
       {/* ACCIONES FINALES */}
       <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
         <button 
-          onClick={() => navigate('/agenda')}
+          onClick={() => navigate('/recepcion')}
           className="px-6 py-2.5 border border-slate-200 text-slate-600 font-medium rounded-xl hover:bg-slate-50 transition-colors"
         >
           Cancelar

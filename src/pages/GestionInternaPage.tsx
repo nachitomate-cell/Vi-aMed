@@ -36,12 +36,32 @@ const GestionInternaPage: React.FC = () => {
     try {
       const snap = await getDocs(collection(db, currentTab.collectionName));
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as DataItem));
-      // Fallback a datos estáticos si la colección está vacía (para demostración)
+      // Fallback a datos estáticos o seeding automático
       if (data.length === 0 && currentTab.id !== 'usuarios') {
-        setItems([
-          { id: 'mock1', nombre: `Ejemplo de ${currentTab.label} 1` },
-          { id: 'mock2', nombre: `Ejemplo de ${currentTab.label} 2` }
-        ]);
+        const defaultData: Record<string, string[]> = {
+          previsiones: ["Fonasa", "Particular", "Particular(E)"],
+          sexos: ["Masculino", "Femenino", "No binario"]
+        };
+
+        if (defaultData[currentTab.id]) {
+          const defaults = defaultData[currentTab.id];
+          const newItems: DataItem[] = [];
+          for (const val of defaults) {
+            try {
+              const docRef = await addDoc(collection(db, currentTab.collectionName), { nombre: val, activo: true });
+              newItems.push({ id: docRef.id, nombre: val, activo: true });
+            } catch(e) {
+               console.error('Error auto-seeding', val, e);
+               newItems.push({ id: 'mock-'+val, nombre: val, activo: true });
+            }
+          }
+          setItems(newItems);
+        } else {
+          setItems([
+            { id: 'mock1', nombre: `Ejemplo de ${currentTab.label} 1`, activo: true },
+            { id: 'mock2', nombre: `Ejemplo de ${currentTab.label} 2`, activo: true }
+          ]);
+        }
       } else {
         setItems(data.map(i => ({ ...i, nombre: i.nombre || i.name || i.email || 'Sin nombre' })));
       }

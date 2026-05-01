@@ -67,6 +67,7 @@ export interface Profesional {
   activo: boolean;
   email?: string;
   rut?: string;
+  fotoUrl?: string;
   creadoEn?: Timestamp;
 }
 

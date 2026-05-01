@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Profesional, RolProfesional } from '../../types/agenda';
 import { actualizarProfesional, toggleActivoProfesional } from '../../services/profesionalesService';
 import { ColorPicker } from './ColorPicker';
+import { useGestionDatos } from '../../hooks/useGestionDatos';
 
 interface Props {
   profesional: Profesional;
@@ -22,6 +23,7 @@ export const FormEditarProfesional: React.FC<Props> = ({ profesional, onActualiz
   const [confirmDesactivar, setConfirmDesactivar] = useState(false);
   const [procesandoToggle, setProcesandoToggle] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const { opciones } = useGestionDatos();
 
   useEffect(() => { setForm({ ...profesional }); setShowValidation(false); }, [profesional]);
 
@@ -36,11 +38,7 @@ export const FormEditarProfesional: React.FC<Props> = ({ profesional, onActualiz
   const isValid = 
     form.rut?.trim() && 
     form.nombre?.trim() && 
-    form.apellidoPaterno?.trim() && 
-    form.apellidoMaterno?.trim() && 
-    form.telefono?.trim() && 
     form.especialidad?.trim() && 
-    form.comision !== undefined && form.comision !== null &&
     form.activo !== undefined;
 
   const handleGuardar = async () => {
@@ -162,12 +160,16 @@ export const FormEditarProfesional: React.FC<Props> = ({ profesional, onActualiz
 
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5">Especialidad *</label>
-            <input
-              type="text"
+            <select
               value={form.especialidad || ''}
               onChange={e => set('especialidad', e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-[#0E7490] transition-colors"
-            />
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-[#0E7490] appearance-none"
+            >
+              <option value="">Seleccionar especialidad...</option>
+              {opciones.especialidades.map(esp => (
+                <option key={esp} value={esp}>{esp}</option>
+              ))}
+            </select>
           </div>
 
           <div>

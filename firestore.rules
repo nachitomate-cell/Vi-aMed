@@ -108,15 +108,23 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // ── Pacientes (colección propia del dashboard) ───────────────
     match /pacientes/{pacId} {
       allow read: if true;
       allow write: if true;
     }
 
-    // ── Tipos de atención (legado) ─────────────────────────────
-    match /tiposAtencion/{tipoId} {
-      allow read: if true;
+    match /retiros_laboratorio/{id} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    match /registro_temperatura/{id} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    match /fichas_clinicas/{rut} {
+      allow read: if isStaff();
       allow write: if isStaff();
     }
   }

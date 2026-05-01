@@ -5,6 +5,7 @@ import {
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import type { EstadoCita } from '../types/agenda';
+import ModalOrdenPago from '../components/recepcion/ModalOrdenPago';
 
 
 /* ── Types ─────────────────────────────────────────────── */
@@ -81,13 +82,31 @@ const SelectorEstado: React.FC<{
 const RecepcionPage: React.FC = () => {
   const navigate = useNavigate();
   const today = new Date();
+  
+  // Calcular lunes y domingo de esta semana
+  const getWeekRange = () => {
+    const d = new Date(today);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // lunes
+    const lunes = new Date(d.setDate(diff));
+    const domingo = new Date(lunes);
+    domingo.setDate(lunes.getDate() + 6);
+    return {
+      lunes: lunes.toISOString().split('T')[0],
+      domingo: domingo.toISOString().split('T')[0]
+    };
+  };
+
+  const { lunes: initialDesde, domingo: initialHasta } = getWeekRange();
   const todayStr = today.toISOString().split('T')[0];
 
   const [registros, setRegistros] = useState<RegistroRecepcion[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const [fechaDesde, setFechaDesde] = useState(todayStr);
-  const [fechaHasta, setFechaHasta] = useState(todayStr);
+  const [fechaDesde, setFechaDesde] = useState(initialDesde);
+  const [fechaHasta, setFechaHasta] = useState(initialHasta);
+  const [ordenPagoRegistro, setOrdenPagoRegistro] = useState<RegistroRecepcion | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   /* ── Listener Firestore ────────────────────────────────── */
   const cargar = useCallback(() => {
@@ -146,6 +165,12 @@ const RecepcionPage: React.FC = () => {
       r.tipoAtencion.toLowerCase().includes(q) ||
       (r.nOperacion ?? '').toLowerCase().includes(q)
     );
+  });
+
+  const ordenados = [...filtrados].sort((a, b) => {
+    const timeA = a.fecha.toMillis();
+    const timeB = b.fecha.toMillis();
+    return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
   });
 
   const formatFecha = (ts: Timestamp) => {
@@ -263,7 +288,18 @@ const RecepcionPage: React.FC = () => {
         <div className="grid grid-cols-12 px-5 py-3 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           <span className="col-span-3">Paciente</span>
           <span className="col-span-2">Fecha atención</span>
-          <span className="col-span-1">Hora</span>
+          <span className="col-span-1 flex items-center gap-1">
+            Hora
+            <button
+              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="p-0.5 hover:bg-slate-200 rounded transition-colors text-slate-500"
+              title={sortOrder === 'asc' ? 'Ver últimas primero' : 'Ver primeras primero'}
+            >
+              <svg className={`w-3 h-3 transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </span>
           <span className="col-span-2">N° Operación</span>
           <span className="col-span-2">Estado</span>
           <span className="col-span-2 text-right">Acciones</span>
@@ -283,7 +319,7 @@ const RecepcionPage: React.FC = () => {
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {filtrados.map(r => (
+            {ordenados.map(r => (
               <div key={r.id} className="grid grid-cols-12 px-5 py-3.5 hover:bg-slate-50/70 transition-colors group items-center">
                 {/* Paciente */}
                 <div className="col-span-3 min-w-0 pr-3">
@@ -322,9 +358,10 @@ const RecepcionPage: React.FC = () => {
                 </div>
 
                 {/* Acciones */}
-                <div className="col-span-2 flex justify-end items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="col-span-2 flex justify-end items-center gap-1">
                   {/* Editar */}
                   <button
+                    onClick={() => navigate(`/atencion/${r.id}`)}
                     title="Editar"
                     className="p-2 rounded-xl text-slate-400 hover:text-[#0E7490] hover:bg-[#0E7490]/10 transition-colors"
                   >
@@ -335,6 +372,7 @@ const RecepcionPage: React.FC = () => {
 
                   {/* Orden de pago */}
                   <button
+                    onClick={() => setOrdenPagoRegistro(r)}
                     title="Orden de pago"
                     className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
                   >
@@ -360,6 +398,14 @@ const RecepcionPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Orden de Pago */}
+      {ordenPagoRegistro && (
+        <ModalOrdenPago
+          registro={ordenPagoRegistro}
+          onCerrar={() => setOrdenPagoRegistro(null)}
+        />
+      )}
     </div>
   );
 };

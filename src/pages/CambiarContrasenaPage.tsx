@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { updatePassword } from 'firebase/auth';
 import { authVinamed } from '../lib/firebase';
 
 const CambiarContrasenaPage: React.FC = () => {
   const navigate = useNavigate();
   const user = authVinamed.currentUser;
 
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
@@ -31,10 +30,6 @@ const CambiarContrasenaPage: React.FC = () => {
     setError(null);
 
     try {
-      // Firebase requiere reautenticación para cambios de contraseña sensibles
-      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      
       // Actualizar
       await updatePassword(user, newPassword);
       
@@ -42,10 +37,10 @@ const CambiarContrasenaPage: React.FC = () => {
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/wrong-password') {
-        setError('La contraseña actual es incorrecta');
+      if (err.code === 'auth/requires-recent-login') {
+        setError('Por seguridad, esta operación requiere un inicio de sesión reciente. Por favor, cierra sesión e inicia de nuevo antes de cambiar tu contraseña.');
       } else {
-        setError('Error al actualizar la contraseña. Intente cerrar sesión e iniciar de nuevo.');
+        setError('Error al actualizar la contraseña. Verifique su conexión o intente más tarde.');
       }
     } finally {
       setLoading(false);
@@ -57,7 +52,7 @@ const CambiarContrasenaPage: React.FC = () => {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-slate-800">Cambiar Contraseña</h1>
-          <p className="text-sm text-slate-500 mt-1">Por seguridad, debes ingresar tu contraseña actual</p>
+          <p className="text-sm text-slate-500 mt-1">Ingresa tu nueva contraseña para actualizar el acceso</p>
         </div>
 
         {success ? (
@@ -72,19 +67,6 @@ const CambiarContrasenaPage: React.FC = () => {
                 {error}
               </div>
             )}
-
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Contraseña Actual</label>
-              <input
-                type="password"
-                required
-                value={currentPassword}
-                onChange={e => setCurrentPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0E7490]"
-              />
-            </div>
-
-            <div style={{ height: '1px', background: '#F1F5F9', margin: '20px 0' }} />
 
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Nueva Contraseña</label>

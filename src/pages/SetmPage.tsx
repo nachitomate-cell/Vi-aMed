@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface Orden {
   id: number;
@@ -46,6 +47,7 @@ const LAB_STATUS = [
 const EMPTY_FORM: MuestraForm = { nombre: '', rut: '', edad: '', tipo: '', solicitante: '', lab: '', obs: '' };
 
 const SetmPage: React.FC = () => {
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<MuestraForm>(EMPTY_FORM);
   const [ordenes, setOrdenes] = useState<Orden[]>([
@@ -87,15 +89,28 @@ const SetmPage: React.FC = () => {
           <h1 className="text-xl font-bold text-slate-800">Sala de Toma de Muestras</h1>
           <p className="text-sm text-slate-500 mt-0.5">Registro y seguimiento de exámenes de laboratorio</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nueva orden
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/retiros')}
+            className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-50 text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm"
+          >
+            <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v10m0 0l-3-3m3 3l3-3" />
+              <path d="M20 12a8 8 0 1 1-16 0" />
+              <path d="M12 22v-4" />
+            </svg>
+            Retiros
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="flex items-center gap-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-lg shadow-[#0E7490]/20"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nueva orden
+          </button>
+        </div>
       </div>
 
       {/* Tipos de examen */}

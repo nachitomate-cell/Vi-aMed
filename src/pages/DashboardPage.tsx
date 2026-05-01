@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { esMobile } from '../utils/device';
 
@@ -150,6 +150,48 @@ const DashboardPage: React.FC = () => {
     return () => unsub();
   }, []);
 
+  const [stats, setStats] = useState({
+    pacientesHoy: 0,
+    informesEco: 0,
+    muestras: 0,
+    procedimientos: 0,
+  });
+
+  useEffect(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const q = query(
+      collection(db, 'citas'),
+      where('fecha', '>=', Timestamp.fromDate(start)),
+      where('fecha', '<=', Timestamp.fromDate(end))
+    );
+
+    const unsub = onSnapshot(q, snap => {
+      const docs = snap.docs.map(d => d.data());
+      const hoy = docs.length;
+      const eco = docs.filter(d => 
+        (d.prestaciones as any[])?.some(p => p.especialidad === 'Ecografia')
+      ).length;
+      const muestras = docs.filter(d => 
+        (d.prestaciones as any[])?.some(p => p.especialidad === 'Toma de Muestras')
+      ).length;
+      const proc = docs.filter(d => 
+        (d.prestaciones as any[])?.some(p => p.especialidad === 'Medicina')
+      ).length;
+
+      setStats({
+        pacientesHoy: hoy,
+        informesEco: eco,
+        muestras: muestras,
+        procedimientos: proc,
+      });
+    });
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     // Si accede desde móvil, redirigir a eco-mobile
     if (esMobile()) {
@@ -172,7 +214,7 @@ const DashboardPage: React.FC = () => {
 
   const boxLabel: Record<string, string> = {
     eco: 'Box Ecografía',
-    enf: 'Box Enfermería',
+    enf: 'Box de Medicina',
     muestras: 'Sala Muestras',
   };
 
@@ -204,10 +246,10 @@ const DashboardPage: React.FC = () => {
 
       {/* ── KPI Cards ─────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <KpiCard label="Pacientes hoy"  valor="3" sub="Registrados"     accent />
-        <KpiCard label="Informes eco"   valor="1" sub="Generados hoy"   accent />
-        <KpiCard label="Muestras"       valor="2" sub="Pendientes"       />
-        <KpiCard label="Procedimientos" valor="0" sub="Enfermería"       />
+        <KpiCard label="Pacientes hoy"  valor={stats.pacientesHoy.toString()} sub="Registrados"     accent />
+        <KpiCard label="Informes eco"   valor={stats.informesEco.toString()} sub="Generados hoy"   accent />
+        <KpiCard label="Muestras"       valor={stats.muestras.toString()} sub="Pendientes"       />
+        <KpiCard label="Procedimientos" valor={stats.procedimientos.toString()} sub="Medicina"       />
       </div>
 
       {/* ── Estado de Boxes ───────────────────────────────────────── */}
@@ -266,11 +308,59 @@ const DashboardPage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {([
             {
-              label: 'Generar Informe Eco',
-              desc: 'Completa y exporta informes con plantilla oficial ViñaMed.',
+              label: 'Agregar Atención',
+              desc: 'Registra una nueva atención, procedimiento o consulta.',
+              cta: 'Nueva atención →',
+              path: '/atencion',
+              accent: true,
+              icon: (
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Box de Medicina',
+              desc: 'Atención de pacientes, anamnesis y ficha clínica.',
+              cta: 'Ir al Box →',
+              path: '/atencion-medica',
+              accent: false,
+              icon: (
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Inventario / REAS',
+              desc: 'Control de insumos, stock y registro de temperaturas.',
+              cta: 'Ver inventario →',
+              path: '/inventario',
+              accent: true,
+              icon: (
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Retiros Lab',
+              desc: 'Registro de retiro de muestras y parámetros técnicos.',
+              cta: 'Ver retiros →',
+              path: '/retiros',
+              accent: false,
+              icon: (
+                <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v10m0 0l-3-3m3 3l3-3" /><path d="M20 12a8 8 0 1 1-16 0" /><path d="M12 22v-4" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Informe Ecografía',
+              desc: 'Completa y exporta informes con plantilla oficial.',
               cta: 'Ir al Box →',
               path: '/box-ecografia',
-              accent: true,
+              accent: false,
               icon: (
                 <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <ellipse cx="12" cy="12" rx="10" ry="6" /><path d="M12 6c2 3.5 2 8.5 0 12" /><path d="M2 12h20" />
@@ -279,7 +369,7 @@ const DashboardPage: React.FC = () => {
             },
             {
               label: 'Toma de Muestras',
-              desc: 'Registro de órdenes y seguimiento de exámenes de laboratorio.',
+              desc: 'Registro de órdenes y seguimiento de exámenes.',
               cta: 'Ir a Sala →',
               path: '/setm',
               accent: false,
@@ -294,7 +384,7 @@ const DashboardPage: React.FC = () => {
               desc: 'Descarga el desglose diario en CSV o Excel.',
               cta: 'Ver reportes →',
               path: '/reportes',
-              accent: true,
+              accent: false,
               icon: (
                 <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
@@ -302,15 +392,14 @@ const DashboardPage: React.FC = () => {
               ),
             },
             {
-              label: 'Registrar Paciente',
-              desc: 'Ingresa un nuevo paciente para el turno actual.',
-              cta: 'Nuevo registro →',
-              path: '/nuevopaciente',
+              label: 'Agenda de profesionales',
+              desc: 'Gestión de citas y disponibilidad de profesionales.',
+              cta: 'Ver agenda →',
+              path: '/agenda',
               accent: false,
               icon: (
                 <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-                  <line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" />
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
               ),
             },

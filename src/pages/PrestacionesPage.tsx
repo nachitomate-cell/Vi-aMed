@@ -16,6 +16,7 @@ interface Prestacion {
   id: string;
   codigo: string;
   nombre: string;
+  descripcion?: string;
   estado: 'activo' | 'inactivo';
   especialidad: string;
   afecto: boolean;
@@ -209,6 +210,86 @@ const ModalPrestacion: React.FC<{
   );
 };
 
+/* ── Script Update Fonasa ───────────────────────────────────── */
+const FONASA_DATA = [
+  { "codigo": "0101001", "total": 12930, "bonificacion": 5680, "copago": 7250 },
+  { "codigo": "010100SM", "total": 37930, "bonificacion": 20420, "copago": 17510 },
+  { "codigo": "0101321", "total": 19220, "bonificacion": 7690, "copago": 11530 },
+  { "codigo": "0404003", "total": 35840, "bonificacion": 22050, "copago": 13790 },
+  { "codigo": "0404006", "total": 19070, "bonificacion": 11730, "copago": 7340 },
+  { "codigo": "0404009", "total": 19930, "bonificacion": 12260, "copago": 7670 },
+  { "codigo": "0404010", "total": 24840, "bonificacion": 15280, "copago": 9560 },
+  { "codigo": "0404012", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404014", "total": 24650, "bonificacion": 15170, "copago": 9480 },
+  { "codigo": "04040146", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404015", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016AD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016AI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016BD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016BI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016C", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016CA", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016CAD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016CAI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016CD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016CI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016CU", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016D", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016DD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016DI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016G", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016GD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016GI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016HD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016HI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016HPD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016HPI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016ID", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016II", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016L", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016LP", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016MD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016MI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016MÑD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016MÑI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016MUD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016MUI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016o", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016oo", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PA", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PCD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PCI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PID", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016PII", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016RD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016RI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016S", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016T", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016TAD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016TAI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016TD", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404016TI", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "04040416PA", "total": 24970, "bonificacion": 15360, "copago": 9610 },
+  { "codigo": "0404118", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118a", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118as", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118av", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118avs", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118s", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118t", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118v", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404118vs", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "0404119", "total": 77390, "bonificacion": 47620, "copago": 29770 },
+  { "codigo": "0404121", "total": 84450, "bonificacion": 51970, "copago": 32480 },
+  { "codigo": "0404121DA", "total": 84450, "bonificacion": 51970, "copago": 32480 },
+  { "codigo": "0404121R", "total": 84450, "bonificacion": 51970, "copago": 32480 },
+  { "codigo": "040418av2", "total": 81950, "bonificacion": 50430, "copago": 31520 },
+  { "codigo": "040418p", "total": 81950, "bonificacion": 50430, "copago": 31520 }
+];
+
 /* ── Page principal ─────────────────────────────────────────── */
 const PrestacionesPage: React.FC = () => {
   const navigate = useNavigate();
@@ -228,6 +309,7 @@ const PrestacionesPage: React.FC = () => {
         id: d.id,
         codigo: d.data().codigo ?? '',
         nombre: d.data().nombre ?? '',
+        descripcion: d.data().descripcion ?? '',
         estado: d.data().estado ?? 'activo',
         especialidad: d.data().especialidad ?? '',
         afecto: d.data().afecto ?? true,
@@ -262,6 +344,51 @@ const PrestacionesPage: React.FC = () => {
     setPrestaciones(p => p.filter(x => x.id !== id));
   };
 
+  const handleUpdateFonasa = async () => {
+    if (!window.confirm("¿Seguro que deseas actualizar los precios de Fonasa masivamente?")) return;
+    setLoading(true);
+    
+    const map = new Map();
+    for (const d of FONASA_DATA) map.set(d.codigo.toLowerCase(), d);
+
+    let count = 0;
+    try {
+      const snap = await getDocs(collection(db, 'gestion_prestaciones'));
+      for (const d of snap.docs) {
+        const cod = (d.data().codigo || '').toLowerCase();
+        const prestacionInfo = map.get(cod);
+        if (prestacionInfo) {
+          let valores = d.data().valoresPrevision || [];
+          const index = valores.findIndex((v: any) => v.tipo === 'Fonasa Nivel 2' || v.tipo === 'Fonasa');
+          
+          const newValor = {
+            tipo: 'Fonasa Nivel 2',
+            valor: prestacionInfo.total,
+            copago: prestacionInfo.copago,
+            bonificacion: prestacionInfo.bonificacion // Se agrega la bonificación aunque no existiera antes
+          };
+
+          if (index >= 0) {
+            valores[index] = newValor;
+          } else {
+            valores.push(newValor);
+          }
+
+          await updateDoc(doc(db, 'gestion_prestaciones', d.id), {
+            valoresPrevision: valores
+          });
+          count++;
+        }
+      }
+      alert(`¡Se actualizaron ${count} prestaciones con los precios de Fonasa Nivel 2!`);
+      fetchPrestaciones();
+    } catch (e) {
+      console.error(e);
+      alert('Error actualizando');
+    }
+    setLoading(false);
+  };
+
   const filtradas = prestaciones.filter(p =>
     p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
     p.codigo.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -278,10 +405,23 @@ const PrestacionesPage: React.FC = () => {
           </button>
           <div>
             <h1 className="text-xl font-bold text-slate-800 leading-tight">Prestaciones</h1>
-            <p className="text-xs text-slate-500">Aranceles y servicios clínicos · {prestaciones.length} registros</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-slate-500">Aranceles y servicios clínicos · {prestaciones.length} registros</p>
+              <button 
+                onClick={handleUpdateFonasa}
+                className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold hover:bg-amber-200 transition-colors"
+                title="Actualizar precios de Fonasa Nivel 2 basados en los códigos provistos"
+              >
+                Actualizar Fonasa Masivo
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+            <span className="w-2 h-2 rounded-full bg-[#0E7490] animate-pulse" />
+            {prestaciones.length} Prestaciones totales
+          </div>
           <button onClick={fetchPrestaciones} className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors" title="Recargar">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.69" /></svg>
           </button>
@@ -312,14 +452,14 @@ const PrestacionesPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="flex-1 p-6">
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex-1 p-6 overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full max-h-[calc(100vh-220px)]">
           {/* Thead */}
           <div className="grid grid-cols-12 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-            <span className="col-span-2">Código</span>
-            <span className="col-span-5">Nombre</span>
+            <span className="col-span-1">Código</span>
+            <span className="col-span-3">Nombre</span>
             <span className="col-span-2">Especialidad</span>
-            <span className="col-span-1">Previsiones</span>
+            <span className="col-span-4">Fonasa Nivel 2 (Total / Bono / Copago)</span>
             <span className="col-span-1 text-center">Estado</span>
             <span className="col-span-1 text-right">Acciones</span>
           </div>
@@ -333,13 +473,31 @@ const PrestacionesPage: React.FC = () => {
               {busqueda ? 'No se encontraron coincidencias.' : 'No hay prestaciones. Agrega la primera.'}
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 overflow-y-auto flex-1">
               {filtradas.map(p => (
                 <div key={p.id} className="grid grid-cols-12 px-4 py-3.5 hover:bg-slate-50 transition-colors group items-center">
-                  <span className="col-span-2 font-mono text-xs text-slate-500 truncate">{p.codigo || '—'}</span>
-                  <span className="col-span-5 text-sm font-semibold text-slate-800 truncate pr-4">{p.nombre}</span>
+                  <span className="col-span-1 font-mono text-xs text-slate-500 truncate pr-2">{p.codigo || '—'}</span>
+                  <span className="col-span-3 text-sm font-semibold text-slate-800 truncate pr-4" title={p.descripcion || p.nombre}>
+                    {p.descripcion || p.nombre}
+                  </span>
                   <span className="col-span-2 text-xs text-slate-500 truncate">{p.especialidad || '—'}</span>
-                  <span className="col-span-1 text-xs text-slate-500">{p.valoresPrevision?.length ?? 0}</span>
+                  <span className="col-span-4 text-xs">
+                    {(() => {
+                      const fonasa = p.valoresPrevision?.find(v => v.tipo === 'Fonasa Nivel 2' || v.tipo === 'Fonasa');
+                      if (!fonasa) return <span className="text-slate-400 italic">No configurado</span>;
+                      
+                      // Si la bonificacion se guardó, la mostramos, sino la calculamos como Total - Copago
+                      const bono = (fonasa as any).bonificacion || (fonasa.valor - fonasa.copago);
+                      
+                      return (
+                        <div className="flex gap-2">
+                          <span className="font-bold text-slate-700" title="Total">${fonasa.valor.toLocaleString('es-CL')}</span>
+                          <span className="text-emerald-600" title="Bonificación">(${bono.toLocaleString('es-CL')})</span>
+                          <span className="font-bold text-[#0E7490]" title="Copago Paciente">${fonasa.copago.toLocaleString('es-CL')}</span>
+                        </div>
+                      );
+                    })()}
+                  </span>
                   <span className="col-span-1 text-center">
                     <span className={`inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full ${p.estado === 'activo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
                       {p.estado === 'activo' ? 'Activo' : 'Inactivo'}

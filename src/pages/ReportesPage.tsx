@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   collection, 
   query, 
@@ -23,6 +24,7 @@ const ReportesPage: React.FC = () => {
   const [period, setPeriod] = useState<Period>('dia');
   const [citas, setCitas] = useState<Cita[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
@@ -60,9 +62,13 @@ const ReportesPage: React.FC = () => {
   }, [period]);
 
   const total = citas.length;
-  const eco = citas.filter(c => c.tipoAtencion.toLowerCase().includes('eco')).length;
-  const muestras = total - eco;
-  const fin = citas.filter(c => c.estado === 'realizada').length;
+  const eco = citas.filter(c => 
+    c.prestaciones?.some(p => p.especialidad === 'Ecografia')
+  ).length;
+  const medicina = citas.filter(c => 
+    c.prestaciones?.some(p => p.especialidad === 'Medicina')
+  ).length;
+  const fin = citas.filter(c => c.estado === 'Finalizado').length;
 
   const exportCSV = () => {
     const header = 'Fecha,Paciente,Tipo de examen,Box / Sala,Estado\n';
@@ -85,9 +91,9 @@ const ReportesPage: React.FC = () => {
     const data = citas.map(c => ({
       Fecha: c.fecha.toDate().toLocaleDateString('es-CL'),
       Paciente: c.pacienteNombre,
-      'Tipo de examen': c.tipoAtencion,
-      'Box / Sala': c.box,
-      Estado: c.estado === 'realizada' ? 'Fin de atención' : 'En proceso'
+      'Prestaciones': c.prestaciones?.map(p => p.prestacion).join(', ') || 'Sin registro',
+      'Especialidades': c.prestaciones?.map(p => p.especialidad).join(', ') || '—',
+      Estado: c.estado
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -133,13 +139,13 @@ const ReportesPage: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { lbl: 'Total exámenes', val: total, color: 'text-slate-800' },
+          { lbl: 'Total atenciones', val: total, color: 'text-slate-800' },
           { lbl: 'Ecografías', val: eco, color: 'text-[#0E7490]' },
-          { lbl: 'Muestras', val: muestras, color: 'text-emerald-600' },
-          { lbl: 'Fin de atención', val: fin, color: 'text-emerald-700' },
+          { lbl: 'Medicina', val: medicina, color: 'text-emerald-600' },
+          { lbl: 'Finalizadas', val: fin, color: 'text-emerald-700' },
         ].map(s => (
-          <div key={s.lbl} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <div className="text-xs text-slate-500 mb-1 font-medium">{s.lbl}</div>
+          <div key={s.lbl} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm transition-transform hover:scale-[1.02]">
+            <div className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-wider">{s.lbl}</div>
             <div className={`font-bold text-3xl ${s.color}`}>{s.val}</div>
           </div>
         ))}
@@ -147,6 +153,15 @@ const ReportesPage: React.FC = () => {
 
       {/* Action buttons */}
       <div className="flex flex-wrap gap-3">
+        <button
+          onClick={() => navigate('/gestion-financiera')}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Gestión Financiera
+        </button>
         <button
           onClick={exportCSV}
           disabled={citas.length === 0}
@@ -184,8 +199,8 @@ const ReportesPage: React.FC = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/50">
-                {['Fecha', 'Paciente', 'Tipo de examen', 'Box / Sala', 'Estado'].map(h => (
-                  <th key={h} className="text-left text-xs text-slate-500 uppercase tracking-wide px-4 py-3 font-semibold">{h}</th>
+                {['Fecha', 'Paciente', 'Prestaciones', 'Especialidad', 'Estado'].map(h => (
+                  <th key={h} className="text-left text-[10px] text-slate-500 uppercase tracking-widest px-4 py-3 font-bold">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -206,18 +221,22 @@ const ReportesPage: React.FC = () => {
                       {c.pacienteNombre}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {c.tipoAtencion}
+                      <div className="flex flex-col gap-0.5">
+                        {c.prestaciones?.map((p, i) => (
+                          <span key={i} className="text-xs font-medium">{p.prestacion}</span>
+                        ))}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">
-                      {c.box}
+                    <td className="px-4 py-3 text-slate-500 text-xs">
+                      {c.prestaciones?.map(p => p.especialidad).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-[11px] font-bold border px-2.5 py-0.5 rounded-full uppercase ${
-                        c.estado === 'realizada'
+                      <span className={`text-[10px] font-bold border px-2.5 py-0.5 rounded-full uppercase ${
+                        c.estado === 'Finalizado'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-[#0E7490]/10 text-[#0E7490] border-[#0E7490]/25'
                       }`}>
-                        {c.estado === 'realizada' ? 'Fin de atención' : 'En proceso'}
+                        {c.estado}
                       </span>
                     </td>
                   </tr>

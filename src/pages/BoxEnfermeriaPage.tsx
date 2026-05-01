@@ -4,6 +4,8 @@ const ROADMAP = [
   { title: 'Hoja de procedimiento', desc: 'Tipo de herida, clasificación, técnica, materiales' },
   { title: 'Medicación administrada', desc: 'Nombre, dosis, vía, hora, responsable (SIS)' },
   { title: 'Signos vitales', desc: 'PA, FC, FR, SatO₂, glicemia capilar' },
+  { title: 'Exámenes Cardiológicos', desc: 'ECG de reposo, monitoreo de presión (MAPA), Holter' },
+  { title: 'Procedimientos', desc: 'Suturas, extracciones, tomas de muestras especiales' },
   { title: 'Exportación PDF', desc: 'Hoja imprimible con firma del enfermero' },
 ];
 

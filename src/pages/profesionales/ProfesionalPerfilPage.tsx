@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storageVinamed } from '../../lib/firebase';
 import type { Profesional } from '../../types/agenda';
-import { getProfesional } from '../../services/profesionalesService';
+import { getProfesional, actualizarProfesional } from '../../services/profesionalesService';
 import { useProfesionalKPIs } from '../../hooks/useProfesionalKPIs';
 import { useProfesionalStats } from '../../hooks/useProfesionalStats';
 import type { Periodo } from '../../hooks/useProfesionalStats';
@@ -13,7 +16,7 @@ import { TablaResumen } from '../../components/profesionales/TablaResumen';
 import { ListaAtenciones } from '../../components/profesionales/ListaAtenciones';
 import { FormEditarProfesional } from '../../components/profesionales/FormEditarProfesional';
 
-type Tab = 'estadisticas' | 'atenciones' | 'editar';
+type Tab = 'estadisticas' | 'prestaciones' | 'atenciones' | 'editar';
 
 const ROL_LABELS: Record<string, string> = {
   medico: 'Médico/a',
@@ -81,6 +84,8 @@ const ProfesionalPerfilPage: React.FC = () => {
   const [profesional, setProfesional] = useState<Profesional | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
   const [tabActivo, setTabActivo] = useState<Tab>('estadisticas');
+  const [prestacionesAsignadas, setPrestacionesAsignadas] = useState<{nombre: string, codigo: string}[]>([]);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
 
   // Período para stats tab
   const [periodoSel, setPeriodoSel] = useState<'hoy' | 'semana' | 'mes' | 'rango'>('mes');
@@ -102,6 +107,16 @@ const ProfesionalPerfilPage: React.FC = () => {
     }).catch(() => setCargandoPerfil(false));
   }, [profesionalId]);
 
+  useEffect(() => {
+    if (!profesional?.especialidad) return;
+    const fetchPrestaciones = async () => {
+      const q = query(collection(db, 'gestion_prestaciones'), where('especialidad', '==', profesional.especialidad));
+      const snap = await getDocs(q);
+      setPrestacionesAsignadas(snap.docs.map(d => ({ nombre: d.data().nombre, codigo: d.data().codigo })));
+    };
+    fetchPrestaciones();
+  }, [profesional?.especialidad]);
+
   const kpis = useProfesionalKPIs(profesionalId);
   const stats = useProfesionalStats(profesionalId, periodo);
   const barData = useMemo(() => computeBarData(stats.porDia, periodo), [stats.porDia, periodo]);
@@ -109,6 +124,26 @@ const ProfesionalPerfilPage: React.FC = () => {
   function getInitials(nombre: string): string {
     return nombre.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
   }
+
+  const handleSubirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profesionalId || !profesional) return;
+
+    setSubiendoFoto(true);
+    try {
+      const storageRef = ref(storageVinamed, `profesionales_fotos/${profesionalId}_${Date.now()}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      
+      await actualizarProfesional(profesionalId, { fotoUrl: url });
+      setProfesional({ ...profesional, fotoUrl: url });
+    } catch (err) {
+      console.error('Error al subir foto:', err);
+      alert('Hubo un error al subir la foto de perfil.');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
 
   if (cargandoPerfil) {
     return (
@@ -146,11 +181,28 @@ const ProfesionalPerfilPage: React.FC = () => {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
-              style={{ backgroundColor: profesional.color }}
-            >
-              {getInitials(profesional.nombre)}
+            <div className="relative group flex-shrink-0">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-lg overflow-hidden bg-cover bg-center"
+                style={{
+                  backgroundColor: profesional.color,
+                  backgroundImage: profesional.fotoUrl ? `url(${profesional.fotoUrl})` : 'none'
+                }}
+              >
+                {!profesional.fotoUrl && getInitials(profesional.nombre)}
+              </div>
+              
+              <label className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                {subiendoFoto ? (
+                  <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleSubirFoto} disabled={subiendoFoto} />
+              </label>
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-100">{profesional.nombre}</h1>
@@ -194,6 +246,7 @@ const ProfesionalPerfilPage: React.FC = () => {
         <div className="flex border-b border-slate-800">
           {([
             { key: 'estadisticas', label: 'Estadísticas' },
+            { key: 'prestaciones', label: 'Prestaciones asignadas' },
             { key: 'atenciones', label: 'Exámenes / Atenciones' },
             { key: 'editar', label: 'Editar perfil' },
           ] as { key: Tab; label: string }[]).map(t => (
@@ -284,6 +337,43 @@ const ProfesionalPerfilPage: React.FC = () => {
                       No hay atenciones realizadas en el período seleccionado.
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Prestaciones Asignadas ── */}
+          {tabActivo === 'prestaciones' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 border-b border-slate-800 pb-4 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#0E7490]/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-[#0E7490]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-200">Prestaciones de la especialidad</h3>
+                  <p className="text-sm text-slate-500">Servicios que <span className="font-semibold text-slate-300">{profesional?.nombre}</span> está habilitado para realizar según su especialidad (<span className="text-[#0E7490]">{profesional?.especialidad}</span>).</p>
+                </div>
+              </div>
+
+              {prestacionesAsignadas.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-sm bg-slate-800/30 rounded-2xl border border-slate-800 border-dashed">
+                  No hay prestaciones registradas para esta especialidad.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {prestacionesAsignadas.map((p, i) => (
+                    <div key={i} className="bg-slate-800/40 hover:bg-slate-800/60 transition-colors border border-slate-700 p-4 rounded-xl flex items-center gap-4 group cursor-default">
+                      <div className="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 group-hover:border-[#0E7490]/30 group-hover:text-[#0E7490] flex items-center justify-center font-bold text-xs transition-colors shadow-sm">
+                        {p.codigo || 'S/N'}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-slate-200 leading-tight group-hover:text-white transition-colors">{p.nombre}</div>
+                        <div className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-semibold">{profesional?.especialidad}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
