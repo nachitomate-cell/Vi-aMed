@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, query, where, doc, getDoc, setDoc, serverTimestamp, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -112,15 +113,32 @@ const AtencionMedicaPage: React.FC = () => {
           <p className="text-sm text-slate-500">Gestión de pacientes y fichas clínicas de medicina general</p>
         </div>
         
-        <div className="relative w-full md:w-80">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          <input 
-            type="text" 
-            placeholder="Buscar por nombre o RUT..." 
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0E7490] focus:ring-1 focus:ring-[#0E7490]/10"
-          />
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Link 
+            to="/atencion" 
+            title="Ir a Atenciones"
+            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#0E7490] hover:border-[#0E7490]/30 transition-all shadow-sm active:scale-95 flex-shrink-0"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          </Link>
+          <Link 
+            to="/nuevopaciente" 
+            title="Crear Nuevo Paciente"
+            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#0E7490] hover:border-[#0E7490]/30 transition-all shadow-sm active:scale-95 flex-shrink-0"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+          </Link>
+
+          <div className="relative flex-1 md:w-80">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input 
+              type="text" 
+              placeholder="Buscar por nombre o RUT..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0E7490] focus:ring-1 focus:ring-[#0E7490]/10"
+            />
+          </div>
         </div>
       </div>
 

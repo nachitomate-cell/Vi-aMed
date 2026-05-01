@@ -273,7 +273,7 @@ const BoxEcografiaPage: React.FC = () => {
             <div className="bg-white border border-slate-200 shadow-sm rounded-xl divide-y divide-slate-200">
               {citasDia.map(cita => {
                 const hora = cita.fecha.toDate().toTimeString().slice(0, 5);
-                const esRealizada = cita.estado === 'realizada';
+                const esRealizada = cita.estado === 'Finalizado';
                 return (
                   <div key={cita.id} className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="flex items-center gap-3 min-w-0">

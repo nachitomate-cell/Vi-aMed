@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -51,6 +51,29 @@ const DesktopLayout: React.FC = () => {
   const nombreCorto = user?.name?.split(' ')[0] ?? 'Usuario';
   const iniciales = getIniciales(user?.name ?? 'U');
 
+  const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert('La aplicación ya está instalada o tu navegador no soporta la instalación directa.');
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
   const handleLogout = () => {
     logout();
   };
@@ -81,20 +104,22 @@ const DesktopLayout: React.FC = () => {
       >
 
         {/* Logo */}
-        <div style={{ padding: '32px 24px 24px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          <div className="relative">
-            <img
-              src={`/logo2.png?v=${Date.now()}`}
-              alt="ViñaMed"
-              style={{ height: 42, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.2))' }}
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            />
+        <Link to="/dashboard" style={{ textDecoration: 'none' }}>
+          <div style={{ padding: '32px 24px 24px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, cursor: 'pointer' }} className="hover:opacity-80 transition-opacity">
+            <div className="relative">
+              <img
+                src={`/logo2.png?v=${Date.now()}`}
+                alt="ViñaMed"
+                style={{ height: 42, objectFit: 'contain', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.2))' }}
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
+            <div>
+              <p style={{ color: '#fff', fontWeight: 800, fontSize: 18, margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>ViñaMed</p>
+              <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: 600, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portal Clínico</p>
+            </div>
           </div>
-          <div>
-            <p style={{ color: '#fff', fontWeight: 800, fontSize: 18, margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>ViñaMed</p>
-            <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: 600, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portal Clínico</p>
-          </div>
-        </div>
+        </Link>
 
         {/* Divisor */}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', marginBottom: 16, flexShrink: 0 }} />
@@ -550,6 +575,7 @@ const DesktopLayout: React.FC = () => {
                         justifyContent: 'center',
                         gap: 8,
                         transition: 'all 0.15s',
+                        marginBottom: 8,
                       }}
                       onMouseOver={e => (e.currentTarget.style.background = '#FFE4E6')}
                       onMouseOut={e => (e.currentTarget.style.background = '#FFF1F2')}
@@ -558,6 +584,33 @@ const DesktopLayout: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-6 0v-1m6 0H9" />
                       </svg>
                       Cerrar sesión
+                    </button>
+
+                    <button
+                      onClick={handleInstallClick}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#F0F9FF',
+                        color: '#0369A1',
+                        border: '1px solid #E0F2FE',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseOver={e => (e.currentTarget.style.background = '#E0F2FE')}
+                      onMouseOut={e => (e.currentTarget.style.background = '#F0F9FF')}
+                    >
+                      <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Instalar app
                     </button>
                   </div>
                 </>

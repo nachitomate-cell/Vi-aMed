@@ -77,7 +77,7 @@ function buildForm(fecha?: Date, cita?: Cita): FormData {
     notas: '',
     visiblePaciente: true,
     prestacion: '',
-    estado: 'confirmada',
+    estado: 'Agendado',
   };
 }
 

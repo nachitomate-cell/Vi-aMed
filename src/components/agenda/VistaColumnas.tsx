@@ -124,7 +124,7 @@ const TarjetaCitaSlot: React.FC<{ slot: Slot; onClick: () => void }> = ({ slot, 
                 App
               </span>
             )}
-            {cita.estado === 'confirmada' && (
+            {cita.estado === 'Confirmado' && (
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#CCFBF1] text-[#0F766E] font-semibold">
                 Confirmada
               </span>

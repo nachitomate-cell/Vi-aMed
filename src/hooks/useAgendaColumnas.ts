@@ -108,7 +108,7 @@ function generarSlots(
     // ¿Hay una cita que empieza exactamente aquí?
     if (citasMap.has(cursor)) {
       const cita = citasMap.get(cursor)!;
-      const activas = ['confirmada', 'solicitada', 'realizada'];
+      const activas = ['Confirmado', 'Agendado', 'Finalizado', 'En espera', 'En atención', 'Rezagado'];
       if (activas.includes(cita.estado)) {
         slots.push({ hora, minutosAbsolutos: cursor, tipo: 'cita', cita, duracionMinutos: cita.duracionMinutos });
         cursor += cita.duracionMinutos;
@@ -319,7 +319,7 @@ export function useAgendaColumnas(fecha: Date, profesionales: Profesional[], fil
 
       const citasProf = citasDia.filter(c =>
         c.profesionalId === prof.id &&
-        !['cancelada', 'no_asistio'].includes(c.estado)
+        !['Anulado', 'No asistió'].includes(c.estado)
       );
 
       const bloqueosProf = bloqueos.filter(b => b.profesionalId === prof.id);

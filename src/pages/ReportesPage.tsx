@@ -68,13 +68,13 @@ const ReportesPage: React.FC = () => {
   const medicina = citas.filter(c => 
     c.prestaciones?.some((p: any) => p.especialidad === 'Medicina')
   ).length;
-  const fin = citas.filter(c => c.estado === 'finalizado' || c.estado === 'realizada').length;
+  const fin = citas.filter(c => c.estado === 'Finalizado').length;
 
   const exportCSV = () => {
     const header = 'Fecha,Paciente,Tipo de examen,Box / Sala,Estado\n';
     const body = citas.map(c => {
       const date = c.fecha.toDate().toLocaleDateString('es-CL');
-      const estado = c.estado === 'realizada' ? 'Fin de atención' : 'En proceso';
+      const estado = c.estado === 'Finalizado' ? 'Fin de atención' : 'En proceso';
       return `${date},${c.pacienteNombre},${c.tipoAtencion},${c.box},${estado}`;
     }).join('\n');
     
@@ -232,7 +232,7 @@ const ReportesPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[10px] font-bold border px-2.5 py-0.5 rounded-full uppercase ${
-                        (c.estado === 'finalizado' || c.estado === 'realizada')
+                        c.estado === 'Finalizado'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-[#0E7490]/10 text-[#0E7490] border-[#0E7490]/25'
                       }`}>

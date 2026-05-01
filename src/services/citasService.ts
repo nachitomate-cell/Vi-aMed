@@ -39,7 +39,7 @@ export async function solicitarCita(paciente: PacienteData, formData: SolicitudF
     preferenciaFecha: formData.preferenciaFecha,
     preferenciaHora:  formData.preferenciaHora,
     notas:            formData.notas || '',
-    estado:           'solicitada',
+    estado:           'Agendado',
     visiblePaciente:  true,
     creadoEn:         serverTimestamp(),
     actualizadoEn:    serverTimestamp(),
@@ -54,7 +54,7 @@ export async function confirmarCita(citaId: string, asignacion: AsignacionData) 
     fecha:             Timestamp.fromDate(asignacion.fecha),
     duracionMinutos:   asignacion.duracion,
     box:               asignacion.box,
-    estado:            'confirmada',
+    estado:            'Confirmado',
     actualizadoEn:     serverTimestamp(),
   });
 }
@@ -90,7 +90,7 @@ export function escucharCitasDelDia(fecha: Date, callback: (citas: any[]) => voi
 export function escucharCitasSolicitadas(callback: (citas: any[]) => void) {
   const q = query(
     collection(db, 'citas'),
-    where('estado', '==', 'solicitada'),
+    where('estado', '==', 'Agendado'),
     orderBy('creadoEn', 'asc')
   );
   return onSnapshot(q, snap => {

@@ -10,7 +10,7 @@ interface Props {
   profesionalInactivo?: boolean;
 }
 
-const ESTADOS: EstadoCita[] = ['solicitada', 'confirmada', 'realizada', 'cancelada', 'no_asistio'];
+const ESTADOS: EstadoCita[] = ['Agendado', 'Confirmado', 'En espera', 'En atención', 'Rezagado', 'Finalizado', 'Anulado', 'No asistió'];
 
 function formatHora(d: Date) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -42,7 +42,7 @@ export const TarjetaCita: React.FC<Props> = ({ cita, onEditar, onCancelar, profe
       className={`relative bg-white border border-slate-200 shadow-sm border-l-4 ${ESTADO_BORDER[estadoLocal]} rounded-xl px-4 py-3 flex gap-3 group hover:border-[#0E7490] transition-colors`}
     >
       {/* Punto parpadeante para citas solicitadas (vienen de la app del paciente) */}
-      {estadoLocal === 'solicitada' && (
+      {estadoLocal === 'Agendado' && (
         <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
       )}
 

@@ -9,7 +9,7 @@ interface Props {
   onCerrar: () => void;
 }
 
-const ESTADOS: EstadoCita[] = ['solicitada', 'confirmada', 'realizada', 'cancelada', 'no_asistio'];
+const ESTADOS: EstadoCita[] = ['Agendado', 'Confirmado', 'En espera', 'En atención', 'Rezagado', 'Finalizado', 'Anulado', 'No asistió'];
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -24,7 +24,7 @@ export const DrawerDetalleCita: React.FC<Props> = ({ cita, onCerrar }) => {
   const [cambiando, setCambiando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const estadoActual = estado ?? cita?.estado ?? 'solicitada';
+  const estadoActual = estado ?? cita?.estado ?? 'Agendado';
 
   const handleEstado = async (nuevo: EstadoCita) => {
     if (!cita) return;

@@ -58,10 +58,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (!user) return;
+
+    // Actualiza el timestamp de actividad en el storage
+    const updateActivity = () => {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        parsed.lastActivity = Date.now();
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(parsed));
+      } catch (e) { /* ignore */ }
+    };
+
+    // Throttle: solo actualizamos cada 30 segundos máximo para no saturar el storage
+    let lastUpdate = Date.now();
+    const handleUserAction = () => {
+      const now = Date.now();
+      if (now - lastUpdate > 30_000) {
+        updateActivity();
+        lastUpdate = now;
+      }
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    events.forEach(ev => window.addEventListener(ev, handleUserAction));
+
     const interval = setInterval(() => {
-      if (!readSessionFromStorage()) setUser(null);
+      if (!readSessionFromStorage()) {
+        setUser(null);
+      }
     }, 30_000);
-    return () => clearInterval(interval);
+
+    return () => {
+      events.forEach(ev => window.removeEventListener(ev, handleUserAction));
+      clearInterval(interval);
+    };
   }, [user]);
 
   return (

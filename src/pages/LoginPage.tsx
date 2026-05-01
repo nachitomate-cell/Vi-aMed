@@ -546,7 +546,7 @@ const LoginPage: React.FC = () => {
                     lineHeight: 1.7, margin: 0,
                   }}>
                     Si no puede acceder, contacte al administrador del sistema.<br />
-                    La sesión expira tras 10 minutos de inactividad.
+                    La sesión expira tras 1 hora de inactividad.
                   </p>
                 </footer>
               </>

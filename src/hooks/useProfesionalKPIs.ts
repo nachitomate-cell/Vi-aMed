@@ -27,7 +27,7 @@ export function useProfesionalKPIs(profesionalId: string | undefined) {
     const inicioSemana = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
     inicioSemana.setHours(0, 0, 0, 0);
 
-    const realizadas = citasRaw.filter(c => c.estado === 'realizada');
+    const realizadas = citasRaw.filter(c => c.estado === 'Finalizado');
     let totalMinutos = 0;
     let esteMes = 0;
     let estaSemana = 0;

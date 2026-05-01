@@ -47,7 +47,7 @@ const ProfesionalesPage: React.FC = () => {
         const pid = data.profesionalId;
         
         if (!pid) return;
-        if (data.estado === 'cancelada') return; // No contar canceladas
+        if (data.estado === 'Anulado') return; // No contar anuladas
 
         if (!counts[pid]) counts[pid] = { total: 0, mes: 0 };
         

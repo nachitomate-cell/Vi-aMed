@@ -128,7 +128,7 @@ const RecepcionPage: React.FC = () => {
         pacienteNombre: d.data().pacienteNombre ?? '',
         pacienteRut: d.data().pacienteRut ?? '',
         fecha: d.data().fecha as Timestamp,
-        estado: (d.data().estado ?? 'solicitada') as EstadoCita,
+        estado: (d.data().estado ?? 'Agendado') as EstadoCita,
         tipoAtencion: d.data().tipoAtencion ?? '',
         profesionalNombre: d.data().profesionalNombre ?? '',
         box: d.data().box ?? '',

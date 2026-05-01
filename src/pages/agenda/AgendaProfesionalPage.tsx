@@ -170,10 +170,10 @@ const AgendaProfesionalPage: React.FC = () => {
                         <p className="text-xs text-slate-500 truncate">{cita.tipoAtencion} · {cita.duracionMinutos} min · {cita.box}</p>
                       </div>
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                        cita.estado === 'solicitada' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        cita.estado === 'confirmada' ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
-                        cita.estado === 'realizada' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        cita.estado === 'cancelada' ? 'bg-red-50 text-red-700 border-red-200' :
+                        cita.estado === 'Agendado' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        cita.estado === 'Confirmado' ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
+                        cita.estado === 'Finalizado' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        cita.estado === 'Anulado' ? 'bg-red-50 text-red-700 border-red-200' :
                         'bg-orange-50 text-orange-700 border-orange-200'
                       }`}>
                         {ESTADO_LABELS[cita.estado]}

@@ -153,7 +153,7 @@ const EcoMobileDashboard: React.FC = () => {
           prevision: 'Particular',
           priority: 'normal' as 'normal' | 'urgent',
           observations: c.notas,
-          reportStatus: (c.estado === 'realizada' ? 'completed' : 'pending') as 'pending' | 'completed'
+          reportStatus: (c.estado === 'Finalizado' ? 'completed' : 'pending') as 'pending' | 'completed'
         }));
       
       setSchedule(mapped);

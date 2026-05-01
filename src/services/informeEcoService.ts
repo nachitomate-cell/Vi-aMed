@@ -75,7 +75,7 @@ export async function guardarInformeEco(
 
   try {
     await updateDoc(doc(db, 'citas', citaId), {
-      estado: 'realizada',
+      estado: 'Finalizado',
       informeId: resultadoRef.id,
       profesionalId: usuarioId, // IMPORTANTE: Para que aparezca en las estadísticas de /profesionales
       actualizadoEn: serverTimestamp(),

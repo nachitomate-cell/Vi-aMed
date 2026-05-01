@@ -58,7 +58,7 @@ export function useProfesionalStats(profesionalId: string | undefined, periodo: 
   }, [profesionalId, inicioStr, finStr]);
 
   return useMemo(() => {
-    const realizadas = citasRaw.filter(c => c.estado === 'realizada');
+    const realizadas = citasRaw.filter(c => c.estado === 'Finalizado');
     const porTipo: Record<string, number> = {};
     const porDia: Record<string, number> = {};
     let totalMinutos = 0;

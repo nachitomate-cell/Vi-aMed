@@ -96,7 +96,7 @@ const AgendaPage: React.FC = () => {
   const handleCancelar = (c: Cita) => setConfirmando(c);
   const confirmarCancelacion = async () => {
     if (!confirmando) return;
-    await actualizarEstadoCita(confirmando.id, 'cancelada').catch(console.error);
+    await actualizarEstadoCita(confirmando.id, 'Anulado').catch(console.error);
     setConfirmando(null);
   };
 

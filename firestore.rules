@@ -102,6 +102,11 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    match /gestion_protocolos/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
     // ── Usuarios staff (dashboard) ───────────────────────────────
     match /usuarios/{uid} {
       allow read: if isStaff();

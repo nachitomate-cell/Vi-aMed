@@ -53,7 +53,7 @@ export const ListaCitasDia: React.FC<Props> = ({
     ? new Date().getHours() * 60 + new Date().getMinutes()
     : -1;
 
-  const nuevasBadge = citas.filter(c => c.estado === 'solicitada').length;
+  const nuevasBadge = citas.filter(c => c.estado === 'Agendado').length;
 
   const headerFecha = `${DIAS[fecha.getDay()]} ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`;
   const countLabel = cargando ? 'Cargando...' : `${citas.length} ${citas.length === 1 ? 'cita' : 'citas'}`;
