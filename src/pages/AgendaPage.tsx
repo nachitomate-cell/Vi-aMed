@@ -188,11 +188,13 @@ const AgendaPage: React.FC = () => {
               className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-[#0E7490] appearance-none"
             >
               <option value="">Todos</option>
-              <option value="solicitada">Solicitadas</option>
-              <option value="confirmada">Confirmadas</option>
-              <option value="realizada">Realizadas</option>
-              <option value="cancelada">Canceladas</option>
-              <option value="no_asistio">No asistió</option>
+              <option value="Agendado">Agendadas</option>
+              <option value="Confirmado">Confirmadas</option>
+              <option value="En espera">En espera</option>
+              <option value="En atención">En atención</option>
+              <option value="Finalizado">Finalizadas</option>
+              <option value="Anulado">Anuladas</option>
+              <option value="No asistió">No asistió</option>
             </select>
           </div>
 

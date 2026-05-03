@@ -342,7 +342,7 @@ const AtencionPage: React.FC = () => {
         metodoPago: datosAtencion.metodoPago,
         nOperacion: datosAtencion.nroOperacion,
         observaciones: datosAtencion.observaciones,
-        estado: datosAtencion.estado,
+        estado: !atencionId && datosAtencion.estado === 'Agendado' ? 'En espera' : datosAtencion.estado,
         prestaciones: prestaciones,
         tipoAtencion,
         actualizadoEn: serverTimestamp()

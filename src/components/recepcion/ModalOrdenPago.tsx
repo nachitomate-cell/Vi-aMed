@@ -194,9 +194,7 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
       URL.revokeObjectURL(url);
 
       // Guardar registro en Firestore
-      const total = prestaciones.reduce((acc, p) => {
-        return acc + (p.exento ?? p.valor ?? 0) + (p.afecto ?? 0) + (p.iva ?? 0);
-      }, 0);
+      const total = prestaciones.reduce((acc, p) => acc + montoPresta(p), 0);
       await Promise.all([
         addDoc(collection(db, 'ordenes_pago'), {
           citaId:          registro.id,
