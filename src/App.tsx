@@ -44,6 +44,7 @@ const LoginIntroPage = lazy(() => import('./pages/LoginIntroPage'));
 const RegistroProfesionalPage = lazy(() => import('./pages/RegistroProfesionalPage'));
 const GestionInternaPage = lazy(() => import('./pages/GestionInternaPage'));
 const PrestacionesPage = lazy(() => import('./pages/PrestacionesPage'));
+const PlantillasEcoPage = lazy(() => import('./pages/PlantillasEcoPage'));
 
 const FullScreenLoader: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
@@ -206,6 +207,16 @@ const AppRoutes: React.FC = () => (
         <RequireAuth>
           <Suspense fallback={<FullScreenLoader />}>
             <PrestacionesPage />
+          </Suspense>
+        </RequireAuth>
+      }
+    />
+    <Route
+      path="/plantillas-eco"
+      element={
+        <RequireAuth>
+          <Suspense fallback={<FullScreenLoader />}>
+            <PlantillasEcoPage />
           </Suspense>
         </RequireAuth>
       }

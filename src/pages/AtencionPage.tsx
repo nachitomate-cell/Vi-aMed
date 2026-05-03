@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGestionDatos } from '../hooks/useGestionDatos';
 import { collection, getDocs, getDoc, query, where, doc, updateDoc, addDoc, serverTimestamp, Timestamp, setDoc } from 'firebase/firestore';
@@ -8,7 +8,10 @@ import type { Profesional } from '../types/agenda';
 
 interface PacienteData {
   id?: string;
-  nombre: string;
+  nombres: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  nombre?: string; // Para compatibilidad
   rut: string;
   fechaNacimiento: string;
   sexo: string;
@@ -34,6 +37,15 @@ interface PrestacionDB {
   valoresPrevision: { tipo: string; valor: number; copago: number }[];
 }
 
+const calcularEdad = (fechaNacimiento: string): number => {
+  if (!fechaNacimiento) return 0;
+  const [year, month, day] = fechaNacimiento.split('-').map(Number);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - year;
+  if (hoy < new Date(hoy.getFullYear(), month - 1, day)) edad--;
+  return edad;
+};
+
 // Auxiliar para formatear cuerpo de RUT con puntos: 17.543.210
 const formatCuerpoRut = (val: string): string => {
   const limpio = val.replace(/[^0-9]/g, '');
@@ -41,6 +53,19 @@ const formatCuerpoRut = (val: string): string => {
     .split('')
     .reverse()
     .reduce((acc, d, i) => (i % 3 === 0 && i !== 0 ? d + '.' + acc : d + acc), '');
+};
+
+const normalizeEstado = (est: string): string => {
+  const mapping: Record<string, string> = {
+    solicitada: 'Agendado',
+    confirmada: 'Confirmado',
+    realizada: 'En espera',
+    atendido: 'En atención',
+    finalizado: 'Finalizado',
+    cancelada: 'Anulado',
+    no_asistio: 'No asistió',
+  };
+  return mapping[est] || est || 'Agendado';
 };
 
 
@@ -51,7 +76,8 @@ const AtencionPage: React.FC = () => {
   
   // Formulario principal
   const [paciente, setPaciente] = useState<PacienteData>({
-    nombre: '', rut: '', fechaNacimiento: '', sexo: '', telefono: '', correo: '', prevision: ''
+    nombres: '', apellidoPaterno: '', apellidoMaterno: '', nombre: '', 
+    rut: '', fechaNacimiento: '', sexo: '', telefono: '', correo: '', prevision: ''
   });
   
   const [datosAtencion, setDatosAtencion] = useState({
@@ -73,14 +99,17 @@ const AtencionPage: React.FC = () => {
 
   const [prestaciones, setPrestaciones] = useState<Prestacion[]>([]);
   
-  // Validaciones
+  // Validaciones y notificaciones
   const [showError, setShowError] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // Autocomplete paciente
+  const searchRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PacienteData[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [pacienteSeleccionado, setPacienteSeleccionado] = useState(false);
 
   const { opciones } = useGestionDatos();
   
@@ -91,6 +120,14 @@ const AtencionPage: React.FC = () => {
     (!nuevaPrestacion.especialidad || p.especialidad === nuevaPrestacion.especialidad) &&
     p.nombre.toLowerCase().includes(prestacionSearch.toLowerCase())
   );
+
+  // Auto-focus en buscador al crear nueva atención
+  useEffect(() => {
+    if (!atencionId) {
+      const t = setTimeout(() => searchRef.current?.focus(), 150);
+      return () => clearTimeout(t);
+    }
+  }, [atencionId]);
 
   // Cargar datos si estamos editando
   useEffect(() => {
@@ -104,6 +141,9 @@ const AtencionPage: React.FC = () => {
           const fechaObj = data.fecha instanceof Timestamp ? data.fecha.toDate() : new Date(data.fecha);
           
           setPaciente({
+            nombres: data.pacienteNombres || data.nombres || '',
+            apellidoPaterno: data.pacienteApellidoPaterno || data.apellidoPaterno || '',
+            apellidoMaterno: data.pacienteApellidoMaterno || data.apellidoMaterno || '',
             nombre: data.pacienteNombre || '',
             rut: data.pacienteRut || '',
             fechaNacimiento: data.pacienteFechaNacimiento || '',
@@ -119,7 +159,7 @@ const AtencionPage: React.FC = () => {
             metodoPago: data.metodoPago || '',
             nroOperacion: data.nOperacion || '',
             observaciones: data.observaciones || '',
-            estado: data.estado || 'Agendado'
+            estado: normalizeEstado(data.estado || 'Agendado')
           });
 
           if (data.prestaciones) {
@@ -144,10 +184,10 @@ const AtencionPage: React.FC = () => {
       .catch(console.error);
   }, []);
 
-  // Buscar pacientes en Firestore (mock or real)
+  // Buscar pacientes en Firestore
   useEffect(() => {
     const fetchPacientes = async () => {
-      if (searchQuery.length < 3) {
+      if (searchQuery.trim().length < 2) {
         setSearchResults([]);
         setSearching(false);
         return;
@@ -156,33 +196,36 @@ const AtencionPage: React.FC = () => {
       setSearching(true);
       try {
         const queryClean = searchQuery.toLowerCase().trim();
-        
-        // Determinamos si es búsqueda por RUT (solo números y puntos)
         const isNumeric = /^[0-9.]+$/.test(queryClean);
-        let rutSearch = queryClean;
-        
+        const rutSearch = isNumeric ? formatCuerpoRut(queryClean) : queryClean;
+
+        const queries: Promise<any>[] = [
+          getDocs(query(collection(db, 'pacientes'), where('nombreLower', '>=', queryClean), where('nombreLower', '<=', queryClean + ''))),
+          getDocs(query(collection(db, 'pacientes'), where('nombre', '>=', queryClean), where('nombre', '<=', queryClean + ''))),
+        ];
+
         if (isNumeric) {
-          // Si es numérico, formateamos como cuerpo de RUT canónico (con puntos)
-          rutSearch = formatCuerpoRut(queryClean);
+          queries.push(
+            getDocs(query(collection(db, 'pacientes'), where('rut', '>=', rutSearch), where('rut', '<=', rutSearch + '')))
+          );
         }
 
-        const [snapNombre, snapRut] = await Promise.all([
-          getDocs(query(collection(db, 'pacientes'), where('nombre', '>=', queryClean), where('nombre', '<=', queryClean + ''))),
-          getDocs(query(collection(db, 'pacientes'), where('rut', '>=', rutSearch), where('rut', '<=', rutSearch + ''))),
-        ]);
+        const snaps = await Promise.all(queries);
         const seen = new Set<string>();
         const results: PacienteData[] = [];
-        for (const snap of [snapNombre, snapRut]) {
-          for (const doc of snap.docs) {
-            if (!seen.has(doc.id)) {
-              seen.add(doc.id);
-              results.push({ id: doc.id, ...doc.data() } as PacienteData);
+        for (const snap of snaps) {
+          for (const d of snap.docs) {
+            if (!seen.has(d.id)) {
+              seen.add(d.id);
+              results.push({ id: d.id, ...d.data() } as PacienteData);
             }
           }
         }
+
+        const rutNorm = (s: string) => s.replace(/[^0-9kK]/gi, '');
         const filtered = results.filter(p =>
           p.nombre?.toLowerCase().includes(queryClean) ||
-          p.rut?.replace(/[^0-9kK]/g, '').includes(queryClean.replace(/\./g, ''))
+          rutNorm(p.rut ?? '').includes(rutNorm(queryClean))
         );
         setSearchResults(filtered);
       } catch (error) {
@@ -192,13 +235,35 @@ const AtencionPage: React.FC = () => {
       }
     };
 
-    const debounce = setTimeout(fetchPacientes, 500);
+    const debounce = setTimeout(fetchPacientes, 200);
     return () => clearTimeout(debounce);
   }, [searchQuery]);
 
   const selectPaciente = (p: PacienteData) => {
+    // Si no tiene los campos separados, intentar separar el nombre completo como fallback
+    let nombres = p.nombres || '';
+    let apPaterno = p.apellidoPaterno || '';
+    let apMaterno = p.apellidoMaterno || '';
+
+    if (!nombres && p.nombre) {
+      const parts = p.nombre.split(' ');
+      if (parts.length >= 3) {
+        nombres = parts.slice(0, parts.length - 2).join(' ');
+        apPaterno = parts[parts.length - 2];
+        apMaterno = parts[parts.length - 1];
+      } else if (parts.length === 2) {
+        nombres = parts[0];
+        apPaterno = parts[1];
+      } else {
+        nombres = parts[0];
+      }
+    }
+
     setPaciente({
-      nombre: p.nombre || '',
+      nombres,
+      apellidoPaterno: apPaterno,
+      apellidoMaterno: apMaterno,
+      nombre: p.nombre || `${nombres} ${apPaterno} ${apMaterno}`.trim(),
       rut: p.rut || '',
       fechaNacimiento: p.fechaNacimiento || '',
       sexo: p.sexo || '',
@@ -209,6 +274,7 @@ const AtencionPage: React.FC = () => {
     setSearchQuery(p.nombre || p.rut || '');
     setSearchResults([]);
     setShowSearchResults(false);
+    setPacienteSeleccionado(true);
   };
 
   const handleAddPrestacion = () => {
@@ -221,13 +287,28 @@ const AtencionPage: React.FC = () => {
     setPrestacionSearch('');
   };
 
-  const [step, setStep] = useState(1);
+  const resetForm = () => {
+    setPaciente({ nombres: '', apellidoPaterno: '', apellidoMaterno: '', nombre: '', rut: '', fechaNacimiento: '', sexo: '', telefono: '', correo: '', prevision: '' });
+    setDatosAtencion({ fecha: new Date().toISOString().split('T')[0], hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }), metodoPago: '', nroOperacion: '', observaciones: '', estado: 'Agendado' });
+    setPrestaciones([]);
+    setNuevaPrestacion({ especialidad: '', profesional: '', prestacion: '', valor: 0, copago: 0, bonoComplementario: 0, observaciones: '' });
+    setSearchQuery('');
+    setPrestacionSearch('');
+    setPacienteSeleccionado(false);
+    setStep(1);
+    setShowError(false);
+    setNotification(null);
+    setTimeout(() => searchRef.current?.focus(), 150);
+  };
 
-  const handleSubmit = async () => {
+  const [step, setStep] = useState(1);
+  const handleSubmit = async (opts?: { andNew?: boolean }) => {
+    const fullNombre = `${paciente.nombres} ${paciente.apellidoPaterno} ${paciente.apellidoMaterno}`.trim();
+    
     // Validar requeridos basicos
-    if (!paciente.nombre || !paciente.rut || !datosAtencion.fecha || !datosAtencion.hora || !datosAtencion.estado) {
+    if (!paciente.nombres || !paciente.apellidoPaterno || !paciente.rut || !datosAtencion.fecha || !datosAtencion.hora || !datosAtencion.estado) {
       setShowError(true);
-      if (!paciente.nombre || !paciente.rut) setStep(1);
+      if (!paciente.nombres || !paciente.apellidoPaterno || !paciente.rut) setStep(1);
       else if (!datosAtencion.fecha || !datosAtencion.hora || !datosAtencion.estado) setStep(2);
       return;
     }
@@ -238,10 +319,21 @@ const AtencionPage: React.FC = () => {
       const [hour, min] = datosAtencion.hora.split(':').map(Number);
       const fechaCita = new Date(year, month - 1, day, hour, min);
 
+      // Derivar tipoAtencion desde las prestaciones (priorizar ecografía)
+      const ecoPresta = prestaciones.find(p => p.especialidad.toLowerCase().includes('eco'));
+      const tipoAtencion = ecoPresta
+        ? ecoPresta.prestacion
+        : (prestaciones[0]?.prestacion || prestaciones[0]?.especialidad || '');
+
+      const edadCalculada = calcularEdad(paciente.fechaNacimiento);
       const payload = {
-        pacienteNombre: paciente.nombre,
+        pacienteNombre: fullNombre,
+        pacienteNombres: paciente.nombres,
+        pacienteApellidoPaterno: paciente.apellidoPaterno,
+        pacienteApellidoMaterno: paciente.apellidoMaterno,
         pacienteRut: paciente.rut,
         pacienteFechaNacimiento: paciente.fechaNacimiento,
+        pacienteEdad: edadCalculada || '',
         pacienteSexo: paciente.sexo,
         pacienteTelefono: paciente.telefono,
         pacienteCorreo: paciente.correo,
@@ -252,42 +344,53 @@ const AtencionPage: React.FC = () => {
         observaciones: datosAtencion.observaciones,
         estado: datosAtencion.estado,
         prestaciones: prestaciones,
+        tipoAtencion,
         actualizadoEn: serverTimestamp()
       };
 
       // Guardar paciente en la base de datos de pacientes automáticamente
-      const pacientePayload = {
-        nombre: paciente.nombre,
-        rut: paciente.rut,
-        fechaNacimiento: paciente.fechaNacimiento,
-        sexo: paciente.sexo,
-        telefono: paciente.telefono,
-        correo: paciente.correo,
-        prevision: paciente.prevision,
-        actualizadoEn: serverTimestamp()
-      };
-      
       try {
-        await setDoc(doc(db, 'pacientes', paciente.rut), pacientePayload, { merge: true });
+        const pacienteRef = doc(db, 'pacientes', paciente.rut);
+        const pacienteSnap = await getDoc(pacienteRef);
+        const pacientePayload: Record<string, unknown> = {
+          nombre: fullNombre,
+          nombres: paciente.nombres,
+          apellidoPaterno: paciente.apellidoPaterno,
+          apellidoMaterno: paciente.apellidoMaterno,
+          nombreLower: fullNombre.toLowerCase(),
+          rut: paciente.rut,
+          fechaNacimiento: paciente.fechaNacimiento,
+          edad: edadCalculada || '',
+          sexo: paciente.sexo,
+          telefono: paciente.telefono,
+          correo: paciente.correo,
+          prevision: paciente.prevision,
+          actualizadoEn: serverTimestamp(),
+        };
+        if (!pacienteSnap.exists()) {
+          pacientePayload.creadoEn = serverTimestamp();
+        }
+        await setDoc(pacienteRef, pacientePayload, { merge: true });
       } catch (e) {
         console.error("No se pudo guardar el paciente:", e);
       }
 
       if (atencionId) {
         await updateDoc(doc(db, 'citas', atencionId), payload);
-        alert('Atención actualizada correctamente');
+        setNotification({ type: 'success', msg: 'Atención actualizada correctamente' });
+        setTimeout(() => navigate('/recepcion'), 1200);
       } else {
-        await addDoc(collection(db, 'citas'), {
-          ...payload,
-          creadoEn: serverTimestamp()
-        });
-        alert('Atención guardada correctamente');
+        await addDoc(collection(db, 'citas'), { ...payload, creadoEn: serverTimestamp() });
+        if (opts?.andNew) {
+          resetForm();
+          setNotification({ type: 'success', msg: `Atención de ${fullNombre} guardada. ¡Listo para el siguiente!` });
+        } else {
+          navigate('/recepcion');
+        }
       }
-      
-      navigate('/recepcion');
     } catch (err) {
       console.error('Error al guardar:', err);
-      alert('Error al guardar la atención');
+      setNotification({ type: 'error', msg: 'Error al guardar la atención. Intente nuevamente.' });
     }
   };
 
@@ -341,9 +444,27 @@ const AtencionPage: React.FC = () => {
 
       {renderStepIndicator()}
 
+      {notification && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-sm animate-in fade-in slide-in-from-top-2 duration-300 ${
+          notification.type === 'success'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          {notification.type === 'success'
+            ? <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            : <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          }
+          {notification.msg}
+          <button onClick={() => setNotification(null)} className="ml-auto text-current opacity-50 hover:opacity-100">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
       {showError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg font-bold animate-pulse text-center">
-          COMPLETE TODOS LOS CAMPOS OBLIGATORIOS (*)
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Complete todos los campos obligatorios (*)
         </div>
       )}
 
@@ -356,16 +477,18 @@ const AtencionPage: React.FC = () => {
             <div className="relative col-span-1 md:col-span-2">
               <label className="block text-xs font-bold text-[#0E7490] uppercase tracking-wider mb-2 flex items-center gap-2">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                Buscador de pacientes en Base de Datos *
+                Buscador de pacientes en Base de Datos
               </label>
               <div className="relative group">
-                <input 
+                <input
+                  ref={searchRef}
                   value={searchQuery}
                   onChange={e => {
                     const val = e.target.value;
                     if (val.includes('-')) return;
                     if (/^[0-9.]+$/.test(val) && val.replace(/\./g, '').length > 9) return;
                     setSearchQuery(val);
+                    setPacienteSeleccionado(false);
                   }}
                   placeholder="Ej: 11111111 (Sin puntos ni DV) o Nombre..."
                   className="w-full bg-white border-2 border-slate-200 rounded-xl pl-12 pr-10 py-3 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] focus:ring-4 focus:ring-[#0E7490]/5 transition-all shadow-sm"
@@ -419,12 +542,52 @@ const AtencionPage: React.FC = () => {
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Nombre Completo *</label>
-              <input 
-                value={paciente.nombre} onChange={e => setPaciente({...paciente, nombre: e.target.value})}
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
-              />
+            {/* Confirmación de paciente seleccionado */}
+            {pacienteSeleccionado && paciente.rut && (
+              <div className="md:col-span-2 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 animate-in fade-in duration-200">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-emerald-800 truncate">
+                    {[paciente.nombres, paciente.apellidoPaterno, paciente.apellidoMaterno].filter(Boolean).join(' ')}
+                  </p>
+                  <p className="text-xs text-emerald-600 font-mono">{paciente.rut}{paciente.prevision && ` · ${paciente.prevision}`}</p>
+                </div>
+                <button
+                  onClick={() => { setSearchQuery(''); setPacienteSeleccionado(false); setPaciente({ nombres: '', apellidoPaterno: '', apellidoMaterno: '', nombre: '', rut: '', fechaNacimiento: '', sexo: '', telefono: '', correo: '', prevision: '' }); setTimeout(() => searchRef.current?.focus(), 50); }}
+                  className="text-emerald-500 hover:text-emerald-700 text-xs font-semibold"
+                >
+                  Cambiar
+                </button>
+              </div>
+            )}
+
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Nombres *</label>
+                <input 
+                  value={paciente.nombres} onChange={e => setPaciente({...paciente, nombres: e.target.value})}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
+                  placeholder="Ej: Juan José"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Apellido Paterno *</label>
+                <input 
+                  value={paciente.apellidoPaterno} onChange={e => setPaciente({...paciente, apellidoPaterno: e.target.value})}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
+                  placeholder="Ej: Pérez"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Apellido Materno</label>
+                <input 
+                  value={paciente.apellidoMaterno} onChange={e => setPaciente({...paciente, apellidoMaterno: e.target.value})}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490]"
+                  placeholder="Ej: González"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">RUT *</label>
@@ -481,7 +644,7 @@ const AtencionPage: React.FC = () => {
           <div className="flex justify-end pt-4">
             <button 
               onClick={() => {
-                if (!paciente.nombre || !paciente.rut || !paciente.prevision) {
+                if (!paciente.nombres || !paciente.apellidoPaterno || !paciente.rut || !paciente.prevision) {
                   setShowError(true);
                   return;
                 }
@@ -744,20 +907,33 @@ const AtencionPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-between pt-4 border-t border-slate-200">
-            <button 
+          <div className="flex justify-between pt-4 border-t border-slate-200 flex-wrap gap-3">
+            <button
               onClick={() => setStep(2)}
               className="px-6 py-3 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               Volver
             </button>
-            <button 
-              onClick={handleSubmit}
-              className="px-10 py-3 bg-[#0E7490] text-white font-bold rounded-xl hover:bg-[#0C4A6E] transition-all shadow-lg shadow-[#0E7490]/30"
-            >
-              Finalizar y Guardar Atención
-            </button>
+            <div className="flex gap-3 flex-wrap">
+              {!atencionId && (
+                <button
+                  onClick={() => handleSubmit({ andNew: true })}
+                  className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all flex items-center gap-2"
+                  title="Guardar esta atención y dejar el formulario listo para el siguiente paciente"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  Guardar y registrar otro
+                </button>
+              )}
+              <button
+                onClick={() => handleSubmit()}
+                className="px-10 py-3 bg-[#0E7490] text-white font-bold rounded-xl hover:bg-[#0C4A6E] transition-all shadow-lg shadow-[#0E7490]/30 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Finalizar y Guardar
+              </button>
+            </div>
           </div>
         </div>
       )}

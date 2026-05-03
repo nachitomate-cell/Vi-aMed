@@ -191,7 +191,7 @@ const ProfesionalPerfilPage: React.FC = () => {
               >
                 {!profesional.fotoUrl && getInitials(profesional.nombre)}
               </div>
-              
+
               <label className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                 {subiendoFoto ? (
                   <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -204,20 +204,51 @@ const ProfesionalPerfilPage: React.FC = () => {
                 <input type="file" accept="image/*" className="hidden" onChange={handleSubirFoto} disabled={subiendoFoto} />
               </label>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h1 className="text-lg font-bold text-slate-100">{profesional.nombre}</h1>
               <p className="text-sm text-slate-400">
                 {ROL_LABELS[profesional.rol] ?? profesional.rol}
                 {profesional.especialidad && ` · ${profesional.especialidad}`}
               </p>
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold mt-1.5 px-2.5 py-0.5 rounded-full border ${
-                profesional.activo
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'bg-slate-700/30 text-slate-500 border-slate-700/50'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${profesional.activo ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-                {profesional.activo ? 'Activo' : 'Inactivo'}
-              </span>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                  profesional.activo
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-slate-700/30 text-slate-500 border-slate-700/50'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${profesional.activo ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                  {profesional.activo ? 'Activo' : 'Inactivo'}
+                </span>
+                {profesional.email && (
+                  <a
+                    href={`mailto:${profesional.email}`}
+                    title={profesional.email}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-[#0E7490] transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span className="truncate max-w-[160px]">{profesional.email}</span>
+                  </a>
+                )}
+                {profesional.telefono && (
+                  <a
+                    href={`tel:${profesional.telefono}`}
+                    title={profesional.telefono}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-[#0E7490] transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    {profesional.telefono}
+                  </a>
+                )}
+                {profesional.comision != null && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">
+                    Comisión <span className="font-bold text-slate-300">{profesional.comision}%</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button

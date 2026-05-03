@@ -87,29 +87,34 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    match /gestion_prestaciones/{id} {
+    match /gestion_prestaciones/{document=**} {
       allow read: if true;
       allow write: if isStaff();
     }
 
-    match /gestion_metodos_pago/{id} {
+    match /gestion_metodos_pago/{document=**} {
       allow read: if true;
       allow write: if isStaff();
     }
 
-    match /gestion_sexos/{id} {
+    match /gestion_sexos/{document=**} {
       allow read: if true;
       allow write: if isStaff();
     }
 
-    match /gestion_protocolos/{id} {
+    match /gestion_protocolos/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /plantillas_eco/{document=**} {
       allow read: if true;
       allow write: if isStaff();
     }
 
     // ── Usuarios staff (dashboard) ───────────────────────────────
     match /usuarios/{uid} {
-      allow read: if isStaff();
+      allow read: if true;
       allow write: if isStaff();
     }
 

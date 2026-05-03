@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useGestionDatos } from '../hooks/useGestionDatos';
+import { formatearRutInput } from '../utils/rut';
 
 interface PacienteForm {
   tipoDocumento: 'rut' | 'pasaporte';
@@ -14,6 +17,7 @@ interface PacienteForm {
   telefono: string;
   correo: string;
   sexo: string;
+  prevision: string;
   direccion: string;
 }
 
@@ -29,7 +33,17 @@ const EMPTY: PacienteForm = {
   telefono: '',
   correo: '',
   sexo: '',
+  prevision: '',
   direccion: ''
+};
+
+const calcularEdad = (fechaNacimiento: string): number => {
+  if (!fechaNacimiento) return 0;
+  const [year, month, day] = fechaNacimiento.split('-').map(Number);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - year;
+  if (hoy < new Date(hoy.getFullYear(), month - 1, day)) edad--;
+  return edad;
 };
 
 const NuevoPacientePage: React.FC = () => {
@@ -39,14 +53,14 @@ const NuevoPacientePage: React.FC = () => {
   const [form, setForm] = useState<PacienteForm>(EMPTY);
   const [saved, setSaved] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { opciones } = useGestionDatos();
 
   const set = (k: keyof PacienteForm, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const isExtranjero = form.tipoDocumento === 'pasaporte';
 
-  const handleSave = () => {
-    // Validations
+  const handleSave = async () => {
     if (isExtranjero) {
       if (!form.pasaporte || !form.pais || !form.nombres || !form.apellidoPaterno || !form.apellidoMaterno || !form.fechaNacimiento || !form.telefono) {
         setShowError(true);
@@ -60,12 +74,44 @@ const NuevoPacientePage: React.FC = () => {
     }
 
     setShowError(false);
-    setSaved(true);
-    setTimeout(() => {
-      setForm(EMPTY);
-      setSaved(false);
-      navigate(from);
-    }, 1500);
+    setSaving(true);
+
+    try {
+      const nombreCompleto = `${form.nombres} ${form.apellidoPaterno} ${form.apellidoMaterno}`.trim();
+      const docId = isExtranjero ? form.pasaporte : form.rut;
+
+      await setDoc(doc(db, 'pacientes', docId), {
+        nombre: nombreCompleto,
+        nombreLower: nombreCompleto.toLowerCase(),
+        nombres: form.nombres,
+        apellidoPaterno: form.apellidoPaterno,
+        apellidoMaterno: form.apellidoMaterno,
+        rut: isExtranjero ? '' : form.rut,
+        pasaporte: isExtranjero ? form.pasaporte : '',
+        pais: form.pais,
+        fechaNacimiento: form.fechaNacimiento,
+        edad: calcularEdad(form.fechaNacimiento),
+        telefono: form.telefono,
+        email: form.correo,
+        sexo: form.sexo,
+        prevision: form.prevision,
+        direccion: form.direccion,
+        creadoEn: serverTimestamp(),
+        actualizadoEn: serverTimestamp(),
+      });
+
+      setSaved(true);
+      setTimeout(() => {
+        setForm(EMPTY);
+        setSaved(false);
+        navigate(from);
+      }, 1500);
+    } catch (err) {
+      console.error('Error al guardar paciente:', err);
+      setShowError(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -130,7 +176,7 @@ const NuevoPacientePage: React.FC = () => {
             ) : (
               <div className="md:col-span-2">
                 <Field label="RUT *">
-                  <input value={form.rut} onChange={e => set('rut', e.target.value)} placeholder="12.345.678-9" />
+                  <input value={form.rut} onChange={e => set('rut', formatearRutInput(e.target.value))} placeholder="12.345.678-9" />
                 </Field>
               </div>
             )}
@@ -174,6 +220,13 @@ const NuevoPacientePage: React.FC = () => {
               </select>
             </Field>
 
+            <Field label="Previsión">
+              <select value={form.prevision} onChange={e => set('prevision', e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {opciones.previsiones.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </Field>
+
             <div className="md:col-span-2">
               <Field label="Dirección">
                 <input value={form.direccion} onChange={e => set('direccion', e.target.value)} placeholder="Ej: Av. Siempreviva 123" />
@@ -190,9 +243,10 @@ const NuevoPacientePage: React.FC = () => {
             </button>
             <button
               onClick={handleSave}
-              className="flex-1 py-2.5 rounded-xl bg-[#0E7490] hover:bg-[#0C4A6E] text-white font-semibold shadow-lg shadow-[#0E7490]/20 transition-all"
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-xl bg-[#0E7490] hover:bg-[#0C4A6E] disabled:opacity-60 text-white font-semibold shadow-lg shadow-[#0E7490]/20 transition-all"
             >
-              Registrar Paciente
+              {saving ? 'Guardando...' : 'Registrar Paciente'}
             </button>
           </div>
         </div>

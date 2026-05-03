@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import type { DatosInformeEco } from '../../services/informeEcoService';
 import { buildPreview } from '../../services/informeEcoService';
-import { PRESTACIONES_ECO, GRUPOS_ECO } from '../../constants/prestacionesEco';
 import TextareaDictado from '../shared/TextareaDictado';
+import { formatearRutInput } from '../../utils/rut';
 
 interface InformeEcoFormProps {
   form: DatosInformeEco;
@@ -11,18 +11,35 @@ interface InformeEcoFormProps {
   isMobile?: boolean;
   dictadosActivos?: number;
   setDictadosActivos?: React.Dispatch<React.SetStateAction<number>>;
+  onPlantillaHallazgos?: () => void;
+  onPlantillaImpresion?: () => void;
+  onPlantillaRecomendaciones?: () => void;
 }
 
-/* ─── Field wrappers ─────────────────────────────────── */
+/* ─── Desktop field wrapper ──────────────────────────────── */
 
-const DesktopField: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+const DesktopField: React.FC<{ label: string; prefilled?: boolean; children: React.ReactNode }> = ({ label, prefilled, children }) => (
   <div className="space-y-1">
-    <label className="text-xs text-slate-500">{label}</label>
-    <div className="[&_input]:w-full [&_input]:bg-white [&_input]:border [&_input]:border-slate-200 [&_input]:rounded-lg [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:text-slate-800 [&_input]:placeholder-slate-400 [&_input]:outline-none [&_input]:focus:border-[#0E7490]/60 [&_select]:w-full [&_select]:bg-white [&_select]:border [&_select]:border-slate-200 [&_select]:rounded-lg [&_select]:px-3 [&_select]:py-2 [&_select]:text-sm [&_select]:text-slate-800 [&_select]:outline-none [&_select]:focus:border-[#0E7490]/60 [&_textarea]:w-full [&_textarea]:bg-white [&_textarea]:border [&_textarea]:border-slate-200 [&_textarea]:rounded-lg [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-sm [&_textarea]:text-slate-800 [&_textarea]:placeholder-slate-400 [&_textarea]:outline-none [&_textarea]:focus:border-[#0E7490]/60 [&_textarea]:resize-none">
+    <label className="text-xs text-slate-500 flex items-center gap-1.5">
+      {label}
+      {prefilled && (
+        <span className="text-[9px] font-bold text-cyan-600 bg-cyan-50 border border-cyan-100 px-1 py-px rounded leading-none">auto</span>
+      )}
+    </label>
+    <div className={[
+      '[&_input]:w-full [&_input]:border [&_input]:rounded-lg [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:text-slate-800 [&_input]:placeholder-slate-400 [&_input]:outline-none [&_input]:transition-colors',
+      '[&_select]:w-full [&_select]:border [&_select]:rounded-lg [&_select]:px-3 [&_select]:py-2 [&_select]:text-sm [&_select]:text-slate-800 [&_select]:outline-none [&_select]:transition-colors',
+      '[&_textarea]:w-full [&_textarea]:border [&_textarea]:rounded-lg [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-sm [&_textarea]:text-slate-800 [&_textarea]:placeholder-slate-400 [&_textarea]:outline-none [&_textarea]:resize-none [&_textarea]:transition-colors',
+      prefilled
+        ? '[&_input]:bg-cyan-50/50 [&_input]:border-cyan-200 [&_select]:bg-cyan-50/50 [&_select]:border-cyan-200 [&_textarea]:bg-cyan-50/50 [&_textarea]:border-cyan-200'
+        : '[&_input]:bg-white [&_input]:border-slate-200 [&_input]:focus:border-[#0E7490]/60 [&_select]:bg-white [&_select]:border-slate-200 [&_select]:focus:border-[#0E7490]/60 [&_textarea]:bg-white [&_textarea]:border-slate-200 [&_textarea]:focus:border-[#0E7490]/60',
+    ].join(' ')}>
       {children}
     </div>
   </div>
 );
+
+/* ─── Mobile field wrapper ───────────────────────────────── */
 
 interface MobileFieldProps {
   label: string;
@@ -52,7 +69,7 @@ const mobileInputClass = (prefilled?: boolean) =>
 const mobileTextareaClass = (prefilled?: boolean) =>
   `w-full border border-slate-200 rounded-xl px-3.5 py-3 text-[16px] text-slate-800 placeholder-slate-400 outline-none focus:border-[#0E7490]/60 resize-none leading-relaxed ${prefilled ? 'bg-[#F8FAFC]' : 'bg-white'}`;
 
-/* ─── Section header for mobile ─────────────────────────── */
+/* ─── Section header (mobile) ────────────────────────────── */
 
 const SectionHeader: React.FC<{
   icon: React.ReactNode;
@@ -104,7 +121,7 @@ const PreviewIcon = () => (
 
 /* ─── Mobile layout ──────────────────────────────────────── */
 
-const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilledKeys = new Set(), setDictadosActivos }) => {
+const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilledKeys = new Set(), setDictadosActivos, onPlantillaHallazgos, onPlantillaImpresion, onPlantillaRecomendaciones }) => {
   const [open, setOpen] = useState({ datos: true, examen: true, informe: true, preview: false });
   const toggle = (k: keyof typeof open) => setOpen(prev => ({ ...prev, [k]: !prev[k] }));
   const today = new Date().toISOString().split('T')[0];
@@ -119,40 +136,19 @@ const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilled
         {open.datos && (
           <div className="mt-3 space-y-3">
             <MobileField label="Nombre completo" required prefilled={pf('nombre')}>
-              <input
-                className={mobileInputClass(pf('nombre'))}
-                value={form.nombre}
-                onChange={e => onChange('nombre', e.target.value)}
-                placeholder="Nombre completo del paciente"
-              />
+              <input className={mobileInputClass(pf('nombre'))} value={form.nombre} onChange={e => onChange('nombre', e.target.value)} placeholder="Nombre completo del paciente" />
             </MobileField>
             <div className="grid grid-cols-2 gap-3">
               <MobileField label="RUT" prefilled={pf('rut')}>
-                <input
-                  className={mobileInputClass(pf('rut'))}
-                  value={form.rut}
-                  onChange={e => onChange('rut', e.target.value)}
-                  placeholder="12.345.678-9"
-                />
+                <input className={mobileInputClass(pf('rut'))} value={form.rut} onChange={e => onChange('rut', formatearRutInput(e.target.value))} placeholder="12.345.678-9" />
               </MobileField>
               <MobileField label="Edad" prefilled={pf('edad')}>
-                <input
-                  type="number"
-                  className={mobileInputClass(pf('edad'))}
-                  value={form.edad}
-                  onChange={e => onChange('edad', e.target.value)}
-                  min={0} max={120}
-                  placeholder="42"
-                />
+                <input type="number" className={mobileInputClass(pf('edad'))} value={form.edad} onChange={e => onChange('edad', e.target.value)} min={0} max={120} placeholder="42" />
               </MobileField>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <MobileField label="Sexo" prefilled={pf('sexo')}>
-                <select
-                  className={mobileInputClass(pf('sexo'))}
-                  value={form.sexo}
-                  onChange={e => onChange('sexo', e.target.value)}
-                >
+                <select className={mobileInputClass(pf('sexo'))} value={form.sexo} onChange={e => onChange('sexo', e.target.value)}>
                   <option value="">—</option>
                   <option>Masculino</option>
                   <option>Femenino</option>
@@ -160,29 +156,14 @@ const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilled
                 </select>
               </MobileField>
               <MobileField label="Fecha examen" prefilled={pf('fecha')}>
-                <input
-                  type="date"
-                  className={mobileInputClass(pf('fecha'))}
-                  value={form.fecha || today}
-                  onChange={e => onChange('fecha', e.target.value)}
-                />
+                <input type="date" className={mobileInputClass(pf('fecha'))} value={form.fecha || today} onChange={e => onChange('fecha', e.target.value)} />
               </MobileField>
             </div>
             <MobileField label="Médico solicitante">
-              <input
-                className={mobileInputClass()}
-                value={form.solicitante}
-                onChange={e => onChange('solicitante', e.target.value)}
-                placeholder="Dr. / Dra."
-              />
+              <input className={mobileInputClass()} value={form.solicitante} onChange={e => onChange('solicitante', e.target.value)} placeholder="Dr. / Dra." />
             </MobileField>
-            <MobileField label="Código de examen">
-              <input
-                className={mobileInputClass()}
-                value={form.codigo}
-                onChange={e => onChange('codigo', e.target.value)}
-                placeholder="Ej: 0404016"
-              />
+            <MobileField label="Código de examen" prefilled={pf('codigo')}>
+              <input className={mobileInputClass(pf('codigo'))} value={form.codigo} onChange={e => onChange('codigo', e.target.value)} placeholder="Ej: 0404016" />
             </MobileField>
           </div>
         )}
@@ -193,59 +174,17 @@ const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilled
         <SectionHeader icon={<ExamIcon />} title="Examen" open={open.examen} onToggle={() => toggle('examen')} />
         {open.examen && (
           <div className="mt-3 space-y-3">
-            <div>
-              <label className="text-[13px] font-medium text-slate-500 flex items-center gap-1 mb-2">
-                Tipo de examen <span className="text-red-400 text-[11px]">*</span>
-                {pf('tipo') && <span className="ml-1 text-[10px] font-normal text-slate-400 bg-slate-100 rounded px-1">auto</span>}
-              </label>
-              <div className="flex flex-col gap-2">
-                <select
-                  className={mobileInputClass()}
-                  value={form.tipo}
-                  onChange={e => onChange('tipo', e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar tipo *</option>
-                  {GRUPOS_ECO.map(grupo => (
-                    <optgroup key={grupo} label={grupo}>
-                      {PRESTACIONES_ECO
-                        .filter(p => p.grupo === grupo)
-                        .map(p => (
-                          <option key={p.id} value={p.label}>
-                            {p.label}
-                          </option>
-                        ))
-                      }
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <MobileField label="Tipo de examen *" prefilled={pf('tipo')}>
+              <input className={mobileInputClass(pf('tipo'))} value={form.tipo} onChange={e => onChange('tipo', e.target.value)} placeholder="Ej: Ecografía abdominal" />
+            </MobileField>
             <MobileField label="Región anatómica / detalle">
-              <input
-                className={mobileInputClass()}
-                value={form.region}
-                onChange={e => onChange('region', e.target.value)}
-                placeholder="Ej: Hígado, tiroides, codo izquierdo..."
-              />
+              <input className={mobileInputClass()} value={form.region} onChange={e => onChange('region', e.target.value)} placeholder="Ej: Hígado, tiroides, codo izquierdo..." />
             </MobileField>
-            <MobileField label="Indicación clínica">
-              <textarea
-                className={mobileTextareaClass()}
-                style={{ minHeight: 80 }}
-                value={form.indicacion}
-                onChange={e => onChange('indicacion', e.target.value)}
-                placeholder="Ej: Dolor abdominal, control nódulo tiroideo..."
-              />
+            <MobileField label="Indicación clínica" prefilled={pf('indicacion')}>
+              <textarea className={mobileTextareaClass(pf('indicacion'))} style={{ minHeight: 80 }} value={form.indicacion} onChange={e => onChange('indicacion', e.target.value)} placeholder="Ej: Dolor abdominal, control nódulo tiroideo..." />
             </MobileField>
-            <MobileField label="Tecnólogo informante" prefilled={pf('informante')}>
-              <input
-                className={mobileInputClass(pf('informante'))}
-                value={form.informante}
-                onChange={e => onChange('informante', e.target.value)}
-                placeholder="Nombre del tecnólogo"
-                readOnly={pf('informante')}
-              />
+            <MobileField label="Médico informante" prefilled={pf('informante')}>
+              <input className={mobileInputClass(pf('informante'))} value={form.informante} onChange={e => onChange('informante', e.target.value)} placeholder="Nombre del médico informante" />
             </MobileField>
           </div>
         )}
@@ -256,44 +195,24 @@ const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilled
         <SectionHeader icon={<ReportIcon />} title="Informe" open={open.informe} onToggle={() => toggle('informe')} />
         {open.informe && (
           <div className="mt-3 space-y-3">
-            <TextareaDictado
-              label="Hallazgos"
-              name="hallazgos"
-              value={form.hallazgos}
-              onChange={(e) => {
-                if ('target' in e) onChange('hallazgos', e.target.value);
-              }}
-              placeholder="Describa los hallazgos ecográficos observados..."
-              required
-              minHeight={120}
+            <TextareaDictado label="Hallazgos" name="hallazgos" value={form.hallazgos}
+              onChange={(e) => { if ('target' in e) onChange('hallazgos', e.target.value); }}
+              placeholder="Describa los hallazgos ecográficos observados..." required minHeight={120}
               onIniciarDictado={() => setDictadosActivos?.((n: number) => n + 1)}
               onDetenerDictado={() => setDictadosActivos?.((n: number) => Math.max(0, n - 1))}
-            />
-            <TextareaDictado
-              label="Impresión ecográfica"
-              name="impresionEcografica"
-              value={form.diagnostico}
-              onChange={(e) => {
-                if ('target' in e) onChange('diagnostico', e.target.value);
-              }}
-              placeholder="Conclusión / impresión diagnóstica..."
-              required
-              minHeight={100}
+              onPlantilla={onPlantillaHallazgos} />
+            <TextareaDictado label="Impresión ecográfica" name="impresionEcografica" value={form.diagnostico}
+              onChange={(e) => { if ('target' in e) onChange('diagnostico', e.target.value); }}
+              placeholder="Conclusión / impresión diagnóstica..." required minHeight={100}
               onIniciarDictado={() => setDictadosActivos?.((n: number) => n + 1)}
               onDetenerDictado={() => setDictadosActivos?.((n: number) => Math.max(0, n - 1))}
-            />
-            <TextareaDictado
-              label="Recomendaciones"
-              name="recomendaciones"
-              value={form.recomendaciones}
-              onChange={(e) => {
-                if ('target' in e) onChange('recomendaciones', e.target.value);
-              }}
-              placeholder="Seguimiento, controles, derivaciones..."
-              minHeight={80}
+              onPlantilla={onPlantillaImpresion} />
+            <TextareaDictado label="Recomendaciones" name="recomendaciones" value={form.recomendaciones}
+              onChange={(e) => { if ('target' in e) onChange('recomendaciones', e.target.value); }}
+              placeholder="Seguimiento, controles, derivaciones..." minHeight={80}
               onIniciarDictado={() => setDictadosActivos?.((n: number) => n + 1)}
               onDetenerDictado={() => setDictadosActivos?.((n: number) => Math.max(0, n - 1))}
-            />
+              onPlantilla={onPlantillaRecomendaciones} />
           </div>
         )}
       </div>
@@ -313,141 +232,118 @@ const MobileLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, prefilled
   );
 };
 
-/* ─── Desktop layout ─────────────────────────────────────── */
+/* ─── Desktop layout — 2 paneles ────────────────────────── */
 
-const DesktopLayout: React.FC<InformeEcoFormProps> = ({ form, onChange, setDictadosActivos }) => {
+const DesktopLayout: React.FC<InformeEcoFormProps> = ({
+  form, onChange, prefilledKeys = new Set(), setDictadosActivos,
+  onPlantillaHallazgos, onPlantillaImpresion, onPlantillaRecomendaciones,
+}) => {
   const today = new Date().toISOString().split('T')[0];
+  const pf = (k: keyof DatosInformeEco) => prefilledKeys.has(k);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Datos paciente */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-1">
-          <PatientIcon />
-          Datos del Paciente
-        </div>
-        <DesktopField label="Nombre completo *">
-          <input value={form.nombre} onChange={e => onChange('nombre', e.target.value)} placeholder="Ej: Juan Pérez González" />
-        </DesktopField>
-        <div className="grid grid-cols-2 gap-3">
-          <DesktopField label="RUT">
-            <input value={form.rut} onChange={e => onChange('rut', e.target.value)} placeholder="12.345.678-9" />
-          </DesktopField>
-          <DesktopField label="Edad">
-            <input type="number" value={form.edad} onChange={e => onChange('edad', e.target.value)} min={0} max={120} placeholder="42" />
-          </DesktopField>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <DesktopField label="Sexo">
-            <select value={form.sexo} onChange={e => onChange('sexo', e.target.value)}>
-              <option value="">—</option>
-              <option>Masculino</option>
-              <option>Femenino</option>
-              <option>No especifica</option>
-            </select>
-          </DesktopField>
-          <DesktopField label="Fecha examen">
-            <input type="date" value={form.fecha || today} onChange={e => onChange('fecha', e.target.value)} />
-          </DesktopField>
-        </div>
-        <DesktopField label="Médico solicitante">
-          <input value={form.solicitante} onChange={e => onChange('solicitante', e.target.value)} placeholder="Dr. / Dra." />
-        </DesktopField>
-        <DesktopField label="Código de examen">
-          <input value={form.codigo} onChange={e => onChange('codigo', e.target.value)} placeholder="Ej: 0404016" />
-        </DesktopField>
-      </div>
+    <div className="grid grid-cols-5 gap-4 items-start">
 
-      {/* Tipo de examen */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-1">
-          <ExamIcon />
-          Tipo de Examen
-        </div>
-        <div>
-          <div className="text-xs text-slate-500 mb-2">Seleccionar tipo *</div>
-          <div className="flex flex-col gap-2">
-            <select
-              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 outline-none focus:border-[#0E7490]/60"
-              value={form.tipo}
-              onChange={e => onChange('tipo', e.target.value)}
-              required
-            >
-              <option value="">Seleccionar tipo *</option>
-              {GRUPOS_ECO.map(grupo => (
-                <optgroup key={grupo} label={grupo}>
-                  {PRESTACIONES_ECO
-                    .filter(p => p.grupo === grupo)
-                    .map(p => (
-                      <option key={p.id} value={p.label}>
-                        {p.label}
-                      </option>
-                    ))
-                  }
-                </optgroup>
-              ))}
-            </select>
+      {/* ── Panel izquierdo: metadata (2/5) ── */}
+      <div className="col-span-2 space-y-3">
+
+        {/* Datos del paciente */}
+        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-2.5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 pb-1 border-b border-slate-100">
+            <PatientIcon />
+            Datos del Paciente
+          </div>
+          <DesktopField label="Nombre completo *" prefilled={pf('nombre')}>
+            <input value={form.nombre} onChange={e => onChange('nombre', e.target.value)} placeholder="Juan Pérez González" />
+          </DesktopField>
+          <div className="grid grid-cols-2 gap-2.5">
+            <DesktopField label="RUT" prefilled={pf('rut')}>
+              <input value={form.rut} onChange={e => onChange('rut', formatearRutInput(e.target.value))} placeholder="12.345.678-9" />
+            </DesktopField>
+            <DesktopField label="Edad" prefilled={pf('edad')}>
+              <input type="number" value={form.edad} onChange={e => onChange('edad', e.target.value)} min={0} max={120} placeholder="42" />
+            </DesktopField>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <DesktopField label="Sexo" prefilled={pf('sexo')}>
+              <select value={form.sexo} onChange={e => onChange('sexo', e.target.value)}>
+                <option value="">—</option>
+                <option>Masculino</option>
+                <option>Femenino</option>
+                <option>No especifica</option>
+              </select>
+            </DesktopField>
+            <DesktopField label="Fecha examen" prefilled={pf('fecha')}>
+              <input type="date" value={form.fecha || today} onChange={e => onChange('fecha', e.target.value)} />
+            </DesktopField>
           </div>
         </div>
-        <DesktopField label="Región anatómica / detalle">
-          <input value={form.region} onChange={e => onChange('region', e.target.value)} placeholder="Ej: Codo izquierdo, hígado, tiroides..." />
-        </DesktopField>
-        <DesktopField label="Indicación clínica">
-          <input value={form.indicacion} onChange={e => onChange('indicacion', e.target.value)} placeholder="Ej: Dolor en epicóndilo, control nódulo tiroideo" />
-        </DesktopField>
-        <DesktopField label="Médico informante *">
-          <select value={form.informante} onChange={e => onChange('informante', e.target.value)}>
-            <option value="">Seleccionar médico...</option>
-            <option value="Dr. Álvaro Trullenque Sánchez|MÉDICO RADIÓLOGO|7.268.691-8">Dr. Álvaro Trullenque Sánchez</option>
-            <option value="Dr. [Médico de turno]|MÉDICO|—">Dr. [Médico de turno]</option>
-          </select>
-        </DesktopField>
+
+        {/* Datos del examen */}
+        <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-2.5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 pb-1 border-b border-slate-100">
+            <ExamIcon />
+            Examen
+          </div>
+          <DesktopField label="Tipo de examen *" prefilled={pf('tipo')}>
+            <input value={form.tipo} onChange={e => onChange('tipo', e.target.value)} placeholder="Ej: Ecografía abdominal" />
+          </DesktopField>
+          <div className="grid grid-cols-2 gap-2.5">
+            <DesktopField label="Código" prefilled={pf('codigo')}>
+              <input value={form.codigo} onChange={e => onChange('codigo', e.target.value)} placeholder="0404016" />
+            </DesktopField>
+            <DesktopField label="Región anatómica">
+              <input value={form.region} onChange={e => onChange('region', e.target.value)} placeholder="Ej: Hígado..." />
+            </DesktopField>
+          </div>
+          <DesktopField label="Indicación clínica" prefilled={pf('indicacion')}>
+            <textarea rows={2} value={form.indicacion} onChange={e => onChange('indicacion', e.target.value)} placeholder="Dolor abdominal, control nódulo tiroideo..." />
+          </DesktopField>
+          <DesktopField label="Médico solicitante">
+            <input value={form.solicitante} onChange={e => onChange('solicitante', e.target.value)} placeholder="Dr. / Dra." />
+          </DesktopField>
+          <DesktopField label="Médico informante *" prefilled={pf('informante')}>
+            <select value={form.informante} onChange={e => onChange('informante', e.target.value)}>
+              <option value="">Seleccionar médico...</option>
+              <option value="Dr. Álvaro Trullenque Sánchez|MÉDICO RADIÓLOGO|7.268.691-8">Dr. Álvaro Trullenque Sánchez</option>
+              <option value="Dr. [Médico de turno]|MÉDICO|—">Dr. [Médico de turno]</option>
+              {/* Si llegó autocompletado desde la cita, mostrar como opción dinámica */}
+              {form.informante && !['Dr. Álvaro Trullenque Sánchez|MÉDICO RADIÓLOGO|7.268.691-8', 'Dr. [Médico de turno]|MÉDICO|—', ''].includes(form.informante) && (
+                <option value={form.informante}>{form.informante}</option>
+              )}
+            </select>
+          </DesktopField>
+        </div>
       </div>
 
-      {/* Informe */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-1">
+      {/* ── Panel derecho: informe (3/5) ── */}
+      <div className="col-span-3 bg-white border border-slate-200 shadow-sm rounded-xl p-4 space-y-1">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 pb-2 border-b border-slate-100 mb-3">
           <ReportIcon />
           Informe
+          <span className="ml-auto text-[10px] font-normal text-slate-400">Los campos requeridos (*) son necesarios para guardar</span>
         </div>
-        <TextareaDictado
-          label="Hallazgos"
-          name="hallazgos"
-          value={form.hallazgos}
-          onChange={(e) => {
-            if ('target' in e) onChange('hallazgos', e.target.value);
-          }}
-          placeholder="Describa los hallazgos ecográficos observados..."
-          required
-          minHeight={120}
+        <TextareaDictado label="Hallazgos *" name="hallazgos" value={form.hallazgos}
+          onChange={(e) => { if ('target' in e) onChange('hallazgos', e.target.value); }}
+          placeholder="Describa en detalle los hallazgos ecográficos observados durante el examen..."
+          required minHeight={160}
           onIniciarDictado={() => setDictadosActivos?.((n: number) => n + 1)}
           onDetenerDictado={() => setDictadosActivos?.((n: number) => Math.max(0, n - 1))}
-        />
-        <TextareaDictado
-          label="Impresión ecográfica"
-          name="impresionEcografica"
-          value={form.diagnostico}
-          onChange={(e) => {
-            if ('target' in e) onChange('diagnostico', e.target.value);
-          }}
-          placeholder="Conclusión / impresión diagnóstica..."
-          required
-          minHeight={100}
+          onPlantilla={onPlantillaHallazgos} />
+        <TextareaDictado label="Impresión ecográfica *" name="impresionEcografica" value={form.diagnostico}
+          onChange={(e) => { if ('target' in e) onChange('diagnostico', e.target.value); }}
+          placeholder="Conclusión diagnóstica..."
+          required minHeight={110}
           onIniciarDictado={() => setDictadosActivos?.((n: number) => n + 1)}
           onDetenerDictado={() => setDictadosActivos?.((n: number) => Math.max(0, n - 1))}
-        />
-        <TextareaDictado
-          label="Recomendaciones"
-          name="recomendaciones"
-          value={form.recomendaciones}
-          onChange={(e) => {
-            if ('target' in e) onChange('recomendaciones', e.target.value);
-          }}
-          placeholder="Seguimiento, controles, derivaciones..."
+          onPlantilla={onPlantillaImpresion} />
+        <TextareaDictado label="Recomendaciones" name="recomendaciones" value={form.recomendaciones}
+          onChange={(e) => { if ('target' in e) onChange('recomendaciones', e.target.value); }}
+          placeholder="Seguimiento, controles, derivaciones sugeridas..."
           minHeight={80}
           onIniciarDictado={() => setDictadosActivos?.((n: number) => n + 1)}
           onDetenerDictado={() => setDictadosActivos?.((n: number) => Math.max(0, n - 1))}
-        />
+          onPlantilla={onPlantillaRecomendaciones} />
       </div>
     </div>
   );
@@ -462,23 +358,11 @@ const InformeEcoForm: React.FC<InformeEcoFormProps> = (props) => {
     <>
       {hayDictadoActivo && (
         <div style={{
-          background: '#FEF2F2',
-          border: '0.5px solid #FECACA',
-          borderRadius: 8,
-          padding: '8px 14px',
-          marginBottom: 16,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          fontSize: 13,
-          color: '#991B1B',
+          background: '#FEF2F2', border: '0.5px solid #FECACA', borderRadius: 8,
+          padding: '8px 14px', marginBottom: 16, display: 'flex', alignItems: 'center',
+          gap: 8, fontSize: 13, color: '#991B1B',
         }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: '#DC2626',
-            animation: 'pulse-ring 1s ease-out infinite',
-            flexShrink: 0,
-          }}/>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#DC2626', animation: 'pulse-ring 1s ease-out infinite', flexShrink: 0 }} />
           Micrófono activo — hablando en campo activo
         </div>
       )}

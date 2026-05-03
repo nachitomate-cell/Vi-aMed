@@ -17,12 +17,44 @@ import {
   where,
   onSnapshot,
   getDocs,
+  getDoc,
+  doc,
   Timestamp
 } from 'firebase/firestore';
+import { makeKeyPlantilla } from './PlantillasEcoPage';
 import { db } from '../lib/firebase';
 import type { Cita } from '../types/agenda';
-import { ESTADO_LABELS } from '../types/agenda';
+import { ESTADO_LABELS, ESTADO_COLORS } from '../types/agenda';
 
+const calcularEdad = (fechaNacimiento: string): string => {
+  if (!fechaNacimiento) return '';
+  const [year, month, day] = fechaNacimiento.split('-').map(Number);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - year;
+  if (hoy < new Date(hoy.getFullYear(), month - 1, day)) edad--;
+  return edad > 0 ? String(edad) : '';
+};
+
+const parsearTipoAtencion = (tipoAtencion: string): { codigo: string; tipo: string } => {
+  const match = tipoAtencion.match(/^([A-Za-z0-9]+)\s*-\s*(.+)$/);
+  if (match) {
+    const codigo = match[1];
+    const tipoConEco = match[2];
+    const tipo = tipoConEco.replace(/ecograf[íi]a\s*/i, '').trim() || tipoConEco;
+    return { codigo, tipo };
+  }
+  const tipo = tipoAtencion.replace(/ecograf[íi]a\s*/i, '').trim() || tipoAtencion;
+  return { codigo: '', tipo };
+};
+
+const iniciales = (nombre: string) =>
+  nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('');
+
+const formatFechaDia = (date: Date) =>
+  date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+
+const formatFechaCorta = (date: Date) =>
+  date.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' });
 
 const BoxEcografiaPage: React.FC = () => {
   const { user } = useAuth();
@@ -34,6 +66,12 @@ const BoxEcografiaPage: React.FC = () => {
   const [informeId, setInformeId] = useState<string | null>(null);
   const [informeParaPDF, setInformeParaPDF] = useState<InformeParaPDF | null>(null);
   const [citaActiva, setCitaActiva] = useState<Cita | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [plantillaActual, setPlantillaActual] = useState<{ hallazgos: string; impresion: string; recomendaciones: string } | null>(null);
+  const [prestacionRaw, setPrestacionRaw] = useState<string>('');
+  const [prefilledKeys, setPrefilledKeys] = useState<Set<keyof DatosInformeEco>>(new Set());
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [plantillasKeys, setPlantillasKeys] = useState<Set<string>>(new Set());
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -42,35 +80,51 @@ const BoxEcografiaPage: React.FC = () => {
   }, [today]);
 
   useEffect(() => {
+    getDocs(collection(db, 'plantillas_eco')).then(snap => {
+      setPlantillasKeys(new Set(snap.docs.map(d => d.id)));
+    }).catch(() => {});
+  }, []);
+
+  const ESTADOS_EXCLUIDOS = ['Anulado', 'No asistió', 'Agendado'];
+
+  useEffect(() => {
     const hoy = new Date();
-    const start = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0);
-    const end = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
+    const diaSemana = hoy.getDay();
+    const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+    const lunes = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + diffLunes, 0, 0, 0);
+    const domingo = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + 6, 23, 59, 59, 999);
 
     const q = query(
       collection(db, 'citas'),
-      where('fecha', '>=', Timestamp.fromDate(start)),
-      where('fecha', '<=', Timestamp.fromDate(end))
+      where('fecha', '>=', Timestamp.fromDate(lunes)),
+      where('fecha', '<=', Timestamp.fromDate(domingo))
     );
 
     const unsub = onSnapshot(q, snap => {
       const allCitas = snap.docs.map(d => ({ id: d.id, ...d.data() } as Cita));
-      const ecoCitas = allCitas.filter(c => c.tipoAtencion.toLowerCase().includes('eco'));
+      const ecoCitas = allCitas.filter(c => {
+        if (ESTADOS_EXCLUIDOS.includes(c.estado)) return false;
+        const esEcoPorTipo = c.tipoAtencion?.toLowerCase().includes('eco');
+        const esEcoPorPrestacion = c.prestaciones?.some(
+          p => p.especialidad?.toLowerCase().includes('eco') || p.prestacion?.toLowerCase().includes('eco')
+        );
+        return esEcoPorTipo || esEcoPorPrestacion;
+      });
       ecoCitas.sort((a, b) => a.fecha.toMillis() - b.fecha.toMillis());
       setCitasDia(ecoCitas);
     });
 
     return () => unsub();
-  }, []);
+  }, [refreshKey]);
 
   const handleChange = (k: keyof DatosInformeEco, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
 
-    // Auto-completar datos del paciente al escribir nombre o RUT
     if ((k === 'nombre' || k === 'rut') && v.length >= 3) {
       const field = k === 'nombre' ? 'nombre' : 'rut';
       Promise.all([
-        getDocs(query(collection(db, 'pacientes'), where(field, '>=', v), where(field, '<=', v + '\uf8ff'))),
-        getDocs(query(collection(db, 'users'), where(field === 'nombre' ? 'name' : 'rut', '>=', v), where(field === 'nombre' ? 'name' : 'rut', '<=', v + '\uf8ff')))
+        getDocs(query(collection(db, 'pacientes'), where(field, '>=', v), where(field, '<=', v + ''))),
+        getDocs(query(collection(db, 'users'), where(field === 'nombre' ? 'name' : 'rut', '>=', v), where(field === 'nombre' ? 'name' : 'rut', '<=', v + '')))
       ]).then(([snapPac, snapUsers]) => {
         const docPac = snapPac.docs[0];
         if (docPac) {
@@ -98,6 +152,52 @@ const BoxEcografiaPage: React.FC = () => {
 
   const canSave =
     !!form.nombre && !!form.tipo && form.hallazgos.trim().length > 0 && form.diagnostico.trim().length > 0;
+
+  useEffect(() => {
+    if (!form.tipo && !prestacionRaw) { setPlantillaActual(null); return; }
+    // prestacionRaw puede ser "CODE - Nombre" (completo) o sólo "Nombre"
+    const rawSinCodigo = prestacionRaw.includes(' - ')
+      ? prestacionRaw.split(' - ').slice(1).join(' - ').trim()
+      : prestacionRaw;
+    const keysToTry = Array.from(new Set([
+      prestacionRaw ? makeKeyPlantilla(prestacionRaw) : '',
+      rawSinCodigo ? makeKeyPlantilla(rawSinCodigo) : '',
+      makeKeyPlantilla(form.tipo),
+    ])).filter(Boolean);
+
+    Promise.all(keysToTry.map(k => getDoc(doc(db, 'plantillas_eco', k))))
+      .then(snaps => {
+        const found = snaps.find(s => s.exists());
+        if (found) {
+          const d = found.data() as any;
+          setPlantillaActual({
+            hallazgos: d.hallazgos || '',
+            impresion: d.impresion || '',
+            recomendaciones: d.recomendaciones || '',
+          });
+        } else {
+          setPlantillaActual(null);
+        }
+      })
+      .catch(() => setPlantillaActual(null));
+  }, [form.tipo, prestacionRaw]);
+
+  const aplicarPlantillaHallazgos = plantillaActual?.hallazgos
+    ? () => handleChange('hallazgos', plantillaActual!.hallazgos)
+    : undefined;
+  const aplicarPlantillaImpresion = plantillaActual?.impresion
+    ? () => handleChange('diagnostico', plantillaActual!.impresion)
+    : undefined;
+  const aplicarPlantillaRecomendaciones = plantillaActual?.recomendaciones
+    ? () => handleChange('recomendaciones', plantillaActual!.recomendaciones)
+    : undefined;
+  const aplicarPlantillaCompleta = plantillaActual
+    ? () => {
+        if (plantillaActual.hallazgos) handleChange('hallazgos', plantillaActual.hallazgos);
+        if (plantillaActual.impresion) handleChange('diagnostico', plantillaActual.impresion);
+        if (plantillaActual.recomendaciones) handleChange('recomendaciones', plantillaActual.recomendaciones);
+      }
+    : undefined;
 
   const handleSave = async () => {
     if (!canSave || saving) return;
@@ -128,8 +228,7 @@ const BoxEcografiaPage: React.FC = () => {
         user?.uid ?? '',
       );
     } catch {
-      // El guardado en Firestore falló (ej: sin Firebase Auth configurado).
-      // Continuamos en modo local: el PDF se puede generar igual.
+      // Firestore falló — continuamos en modo local, el PDF se genera igual
     }
 
     setInformeId(savedId);
@@ -138,55 +237,100 @@ const BoxEcografiaPage: React.FC = () => {
   };
 
   const handleNuevoInformeParaCita = async (cita: Cita) => {
-    let tipoLimpio = cita.tipoAtencion.replace(/ecograf[íi]a\s*/i, '').trim();
-    if (!tipoLimpio) tipoLimpio = cita.tipoAtencion;
+    const tipoBase = cita.tipoAtencion
+      || cita.prestaciones?.find(p => p.especialidad?.toLowerCase().includes('eco'))?.prestacion
+      || '';
+    const { codigo: codigoParsed, tipo: tipoParsed } = parsearTipoAtencion(tipoBase);
+    const fechaCita = cita.fecha.toDate().toISOString().split('T')[0];
+
+    let edadStr = cita.pacienteEdad ? String(cita.pacienteEdad) : '';
+    if (!edadStr && cita.pacienteFechaNacimiento) {
+      edadStr = calcularEdad(cita.pacienteFechaNacimiento);
+    }
+    if (!edadStr && cita.pacienteRut) {
+      try {
+        const pacSnap = await getDoc(doc(db, 'pacientes', cita.pacienteRut));
+        if (pacSnap.exists()) {
+          const pd = pacSnap.data();
+          edadStr = pd.edad ? String(pd.edad) : calcularEdad(pd.fechaNacimiento || '');
+        }
+      } catch { /* ignorar */ }
+    }
+
+    const sexoCita = cita.pacienteSexo || '';
+    setPrestacionRaw(tipoBase);
 
     setCitaActiva(cita);
     setInformeId(cita.informeId || null);
     setInformeParaPDF(null);
     setDictadosActivos(0);
+    setShowPdfPreview(false);
 
     if (cita.informeId) {
-      // Fetch the existing report
       const existente = await getInformeExistente(cita.id);
       if (existente) {
         setForm({
           nombre: existente.pacienteNombre || cita.pacienteNombre,
           rut: existente.pacienteRut || cita.pacienteRut,
-          edad: existente.edad || '',
-          sexo: existente.sexo || '',
-          fecha: existente.fecha ? (existente.fecha.toDate ? existente.fecha.toDate().toISOString().split('T')[0] : existente.fecha.split('T')[0]) : INITIAL_FORM.fecha,
+          edad: existente.edad || edadStr,
+          sexo: existente.sexo || sexoCita,
+          fecha: existente.fecha
+            ? (existente.fecha.toDate ? existente.fecha.toDate().toISOString().split('T')[0] : existente.fecha.split('T')[0])
+            : fechaCita,
           solicitante: existente.medicoSolicitante || '',
-          codigo: existente.codigoExamen || '',
-          tipo: existente.tipoExamen || tipoLimpio,
+          codigo: existente.codigoExamen || codigoParsed,
+          tipo: existente.tipoExamen || tipoParsed,
           region: existente.regionAnatomica || '',
-          indicacion: existente.indicacionClinica || '',
+          indicacion: existente.indicacionClinica || cita.notas || '',
           informante: existente.medicoInformante || '',
           hallazgos: existente.hallazgos || '',
           diagnostico: existente.impresionEcografica || '',
           recomendaciones: existente.recomendaciones || '',
         });
+        // Para informes existentes solo marcamos los campos del paciente
+        const keys = new Set<keyof DatosInformeEco>(['fecha', 'tipo', 'codigo']);
+        if (cita.pacienteNombre) keys.add('nombre');
+        if (cita.pacienteRut) keys.add('rut');
+        if (edadStr) keys.add('edad');
+        if (sexoCita) keys.add('sexo');
+        setPrefilledKeys(keys);
       } else {
+        // Sin informe encontrado — form vacío con datos de cita
         setForm({
           ...INITIAL_FORM,
           nombre: cita.pacienteNombre,
           rut: cita.pacienteRut,
-          tipo: tipoLimpio,
+          edad: edadStr,
+          sexo: sexoCita,
+          fecha: fechaCita,
+          codigo: codigoParsed,
+          tipo: tipoParsed,
+          indicacion: cita.notas || '',
+          informante: cita.profesionalNombre || '',
         });
+        const keys = buildPrefilledKeys(cita, edadStr, sexoCita, tipoParsed, codigoParsed);
+        setPrefilledKeys(keys);
       }
     } else {
+      // Nuevo informe — cargar todo lo disponible desde la cita
       setForm({
         ...INITIAL_FORM,
         nombre: cita.pacienteNombre,
         rut: cita.pacienteRut,
-        tipo: tipoLimpio,
+        edad: edadStr,
+        sexo: sexoCita,
+        fecha: fechaCita,
+        codigo: codigoParsed,
+        tipo: tipoParsed,
+        indicacion: cita.notas || '',
+        informante: cita.profesionalNombre || '',
       });
+      const keys = buildPrefilledKeys(cita, edadStr, sexoCita, tipoParsed, codigoParsed);
+      setPrefilledKeys(keys);
     }
 
     setShowForm(true);
   };
-
-
 
   return (
     <div className="p-5 space-y-5">
@@ -196,33 +340,129 @@ const BoxEcografiaPage: React.FC = () => {
           <h1 className="text-xl font-bold text-slate-800">Box Ecografía</h1>
           <p className="text-sm text-slate-500 mt-0.5">Generación de informes de imagenología</p>
         </div>
+        {showForm ? (
+          <button
+            onClick={() => {
+              setForm(INITIAL_FORM);
+              setInformeId(null);
+              setInformeParaPDF(null);
+              setCitaActiva(null);
+              setShowForm(false);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-800 text-sm font-medium rounded-xl transition-all shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver a la lista
+          </button>
+        ) : (
+          <button
+            onClick={() => setRefreshKey(k => k + 1)}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-[#0E7490] text-slate-500 hover:text-[#0E7490] text-xs font-semibold rounded-xl transition-all shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.69" />
+            </svg>
+            Actualizar
+          </button>
+        )}
       </div>
 
       {showForm ? (
         <div className="space-y-4">
+          {/* Tarjeta paciente / cita activa */}
+          {citaActiva && (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="flex items-center gap-4 px-5 py-3.5">
+                <div className="w-9 h-9 rounded-full bg-[#0E7490]/10 flex items-center justify-center text-[#0E7490] font-bold text-xs flex-shrink-0 select-none">
+                  {iniciales(form.nombre || citaActiva.pacienteNombre)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-slate-800 text-sm truncate">{form.nombre || citaActiva.pacienteNombre}</div>
+                  <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    {form.rut && <span>{form.rut}</span>}
+                    {form.edad && <><span>·</span><span>{form.edad} años</span></>}
+                    {form.sexo && <><span>·</span><span>{form.sexo}</span></>}
+                    {citaActiva.prevision && <><span>·</span><span className="font-medium text-slate-500">{citaActiva.prevision}</span></>}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0 hidden sm:block">
+                  <div className="text-sm font-medium text-slate-700 truncate max-w-[200px]">
+                    {form.tipo || prestacionRaw}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {formatFechaCorta(citaActiva.fecha.toDate())} · {citaActiva.fecha.toDate().toTimeString().slice(0, 5)}
+                  </div>
+                </div>
+                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg border flex-shrink-0 ${ESTADO_COLORS[citaActiva.estado] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                  {ESTADO_LABELS[citaActiva.estado] || citaActiva.estado}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Banner plantilla disponible */}
+          {plantillaActual && aplicarPlantillaCompleta && (
+            <div className="flex items-center justify-between gap-3 bg-cyan-50 border border-cyan-200 rounded-xl px-4 py-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <svg className="w-4 h-4 text-cyan-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                <span className="text-sm text-cyan-700 truncate">
+                  Plantilla disponible para <strong>{form.tipo || prestacionRaw}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={aplicarPlantillaCompleta}
+                className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-700 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Aplicar plantilla completa
+              </button>
+            </div>
+          )}
+
+          {/* Formulario principal */}
           <InformeEcoForm
             form={form}
             onChange={handleChange}
             dictadosActivos={dictadosActivos}
             setDictadosActivos={setDictadosActivos}
+            prefilledKeys={prefilledKeys}
+            onPlantillaHallazgos={aplicarPlantillaHallazgos}
+            onPlantillaImpresion={aplicarPlantillaImpresion}
+            onPlantillaRecomendaciones={aplicarPlantillaRecomendaciones}
           />
 
-          {/* Vista previa en tiempo real — diseño fiel al PDF */}
+          {/* Toggle vista previa PDF */}
           {!informeParaPDF && (
             <div>
-              <div className="text-xs font-bold text-[#0E7490] uppercase tracking-widest mb-3 flex items-center gap-2">
+              <button
+                onClick={() => setShowPdfPreview(v => !v)}
+                className="flex items-center gap-2 text-xs font-semibold text-[#0E7490] hover:text-[#0C4A6E] mb-3 transition-colors"
+              >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                 </svg>
-                Vista previa del informe PDF
-              </div>
-              <div style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '117%' }}>
-                <PdfPreviewInforme form={form} fecha={today} />
-              </div>
+                {showPdfPreview ? 'Ocultar vista previa' : 'Ver vista previa del PDF'}
+                <svg className={`w-3.5 h-3.5 transition-transform ${showPdfPreview ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {showPdfPreview && (
+                <div style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '117%' }}>
+                  <PdfPreviewInforme form={form} fecha={today} />
+                </div>
+              )}
             </div>
           )}
 
-          {/* Acciones PDF — aparece siempre tras guardar (con o sin Firestore) */}
+          {/* Acciones PDF post-guardado */}
           {informeParaPDF && (
             <AccionesInforme
               informe={informeParaPDF}
@@ -231,73 +471,189 @@ const BoxEcografiaPage: React.FC = () => {
             />
           )}
 
-          {/* Botones de acción */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => {
-                setForm(INITIAL_FORM);
-                setInformeId(null);
-                setInformeParaPDF(null);
-                setShowForm(false);
-              }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 text-sm transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.69" />
-              </svg>
-              {informeParaPDF ? 'Volver a la lista' : 'Cancelar'}
-            </button>
+          {/* Barra de acciones */}
+          <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-slate-100">
             <div className="flex-1" />
             {!informeParaPDF && (
               <button
                 onClick={handleSave}
                 disabled={!canSave || saving}
-                className={`flex items-center gap-2 text-white text-sm font-semibold px-5 py-2 rounded-xl transition-colors ${
+                className={`flex items-center gap-2 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors shadow-sm ${
                   canSave && !saving
-                    ? 'bg-[#0E7490] hover:bg-[#0c6680]'
+                    ? 'bg-[#0E7490] hover:bg-[#0c6680] shadow-[#0E7490]/20'
                     : 'bg-slate-300 cursor-not-allowed'
                 }`}
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" />
-                </svg>
+                {saving ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" />
+                  </svg>
+                )}
                 {saving ? 'Guardando...' : 'Guardar Informe'}
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="text-xs text-slate-500 uppercase tracking-widest">Pacientes del Turno (Ecografías)</div>
-          {citasDia.length > 0 ? (
-            <div className="bg-white border border-slate-200 shadow-sm rounded-xl divide-y divide-slate-200">
-              {citasDia.map(cita => {
+        <CitasList
+          citasDia={citasDia}
+          onSeleccionar={handleNuevoInformeParaCita}
+          plantillasKeys={plantillasKeys}
+        />
+      )}
+    </div>
+  );
+};
+
+/* ─── Helpers ──────────────────────────────────────────────── */
+
+function buildPrefilledKeys(
+  cita: Cita,
+  edadStr: string,
+  sexoCita: string,
+  tipoParsed: string,
+  codigoParsed: string,
+): Set<keyof DatosInformeEco> {
+  const keys = new Set<keyof DatosInformeEco>(['fecha'] as (keyof DatosInformeEco)[]);
+  if (cita.pacienteNombre) keys.add('nombre');
+  if (cita.pacienteRut) keys.add('rut');
+  if (edadStr) keys.add('edad');
+  if (sexoCita) keys.add('sexo');
+  if (tipoParsed) keys.add('tipo');
+  if (codigoParsed) keys.add('codigo');
+  if (cita.profesionalNombre) keys.add('informante');
+  if (cita.notas) keys.add('indicacion');
+  return keys;
+}
+
+/* ─── Lista de citas agrupada por día ─────────────────────── */
+
+interface CitasListProps {
+  citasDia: Cita[];
+  onSeleccionar: (cita: Cita) => void;
+  plantillasKeys: Set<string>;
+}
+
+const CitasList: React.FC<CitasListProps> = ({ citasDia, onSeleccionar, plantillasKeys }) => {
+  // Agrupar por día (YYYY-MM-DD)
+  const porDia = citasDia.reduce<Record<string, Cita[]>>((acc, c) => {
+    const key = c.fecha.toDate().toISOString().split('T')[0];
+    (acc[key] = acc[key] || []).push(c);
+    return acc;
+  }, {});
+
+  const todayKey = new Date().toISOString().split('T')[0];
+  const diasOrdenados = Object.keys(porDia).sort();
+
+  if (citasDia.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Ecografías de la Semana</div>
+        <div className="bg-white border border-slate-200 rounded-xl p-10 text-center shadow-sm">
+          <svg className="w-10 h-10 mx-auto text-slate-200 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <p className="text-sm text-slate-400">No hay ecografías esta semana.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Ecografías de la Semana</div>
+      {diasOrdenados.map(dia => {
+        const citas = porDia[dia];
+        const esHoy = dia === todayKey;
+        const fechaDate = citas[0].fecha.toDate();
+        const labelDia = formatFechaDia(fechaDate);
+        const completadas = citas.filter(c => c.informeId).length;
+
+        return (
+          <div key={dia}>
+            {/* Encabezado del día */}
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`text-xs font-bold uppercase tracking-wider capitalize ${esHoy ? 'text-[#0E7490]' : 'text-slate-400'}`}>
+                {esHoy ? `Hoy — ${labelDia}` : labelDia}
+              </div>
+              {esHoy && <span className="w-1.5 h-1.5 rounded-full bg-[#0E7490] inline-block" />}
+              <div className="flex-1 h-px bg-slate-100" />
+              {completadas > 0 && (
+                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                  {completadas}/{citas.length} con informe
+                </span>
+              )}
+            </div>
+
+            {/* Tarjetas de citas */}
+            <div className="bg-white border border-slate-200 shadow-sm rounded-xl divide-y divide-slate-100">
+              {citas.map(cita => {
                 const hora = cita.fecha.toDate().toTimeString().slice(0, 5);
-                const esRealizada = cita.estado === 'Finalizado';
+                const tipoBase = cita.tipoAtencion
+                  || cita.prestaciones?.find(p => p.especialidad?.toLowerCase().includes('eco'))?.prestacion
+                  || '';
+                const prestacionNombre = tipoBase || 'Ecografía';
+                const prevision = cita.prevision
+                  || cita.prestaciones?.find(p => p.prevision)?.prevision
+                  || '';
+                const puedeRedactar = ['En atención', 'Rezagado', 'Finalizado', 'Confirmado', 'En espera'].includes(cita.estado);
+                const tieneInforme = !!cita.informeId;
+
+                const { tipo: tipoParsed } = parsearTipoAtencion(tipoBase);
+                const rawSinCodigo = tipoBase.includes(' - ') ? tipoBase.split(' - ').slice(1).join(' - ').trim() : tipoBase;
+                const keysToCheck = [tipoBase, rawSinCodigo, tipoParsed].filter(Boolean).map(makeKeyPlantilla);
+                const tienePlantilla = keysToCheck.some(k => plantillasKeys.has(k));
+
                 return (
-                  <div key={cita.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-[#0E7490]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                  <div key={cita.id} className={`flex items-center gap-4 px-4 py-3.5 group ${tieneInforme ? 'bg-emerald-50/30' : ''}`}>
+                    {/* Hora + icono estado */}
+                    <div className="flex flex-col items-center flex-shrink-0 w-12">
+                      <span className={`text-sm font-bold tabular-nums ${tieneInforme ? 'text-emerald-600' : 'text-slate-700'}`}>{hora}</span>
+                      {tieneInforme && (
+                        <svg className="w-3.5 h-3.5 text-emerald-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-800">{cita.pacienteNombre}</div>
-                        <div className="text-xs text-slate-500">{cita.tipoAtencion} · {hora}</div>
+                      )}
+                    </div>
+
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 select-none ${tieneInforme ? 'bg-emerald-100 text-emerald-700' : 'bg-[#0E7490]/10 text-[#0E7490]'}`}>
+                      {iniciales(cita.pacienteNombre)}
+                    </div>
+
+                    {/* Info paciente */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-slate-800 truncate">{cita.pacienteNombre}</div>
+                      <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tienePlantilla ? 'bg-cyan-400' : 'bg-slate-300'}`}
+                          title={tienePlantilla ? 'Plantilla configurada' : 'Sin plantilla'}
+                        />
+                        <span className="truncate">{prestacionNombre}</span>
+                        {prevision && <><span>·</span><span className="font-medium text-slate-500">{prevision}</span></>}
+                        {cita.profesionalNombre && <><span>·</span><span>{cita.profesionalNombre}</span></>}
                       </div>
                     </div>
+
+                    {/* Estado + acción */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {!esRealizada ? (
-                        <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg">
-                          Estado: {ESTADO_LABELS[cita.estado] || cita.estado}
-                        </span>
-                      ) : (
-                        <button 
-                          onClick={() => handleNuevoInformeParaCita(cita)}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${cita.informeId ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100'}`}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border hidden sm:inline-flex ${ESTADO_COLORS[cita.estado] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                        {ESTADO_LABELS[cita.estado] || cita.estado}
+                      </span>
+                      {puedeRedactar && (
+                        <button
+                          onClick={() => onSeleccionar(cita)}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                            tieneInforme
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : tienePlantilla
+                                ? 'bg-[#0E7490] text-white border-transparent hover:bg-[#0c6680]'
+                                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                          }`}
                         >
-                          {cita.informeId ? 'Ver/Editar Informe' : 'Redactar Informe'}
+                          {tieneInforme ? 'Ver / Editar' : tienePlantilla ? 'Completar' : 'Falta plantilla'}
                         </button>
                       )}
                     </div>
@@ -305,16 +661,9 @@ const BoxEcografiaPage: React.FC = () => {
                 );
               })}
             </div>
-          ) : (
-            <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-sm">
-              <p className="text-sm text-slate-400">No hay atenciones de ecografía en este turno.</p>
-            </div>
-          )}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
-            <p className="text-xs text-slate-500">Los informes usan la plantilla oficial ViñaMed con firma del médico informante.</p>
           </div>
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 };

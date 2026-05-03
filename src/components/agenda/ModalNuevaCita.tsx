@@ -14,6 +14,7 @@ import {
 import type { Profesional, PacienteResultado } from '../../types/agenda';
 import { useAuth } from '../../auth/AuthContext';
 import { LABELS_ECO } from '../../constants/prestacionesEco';
+import { formatearRutInput } from '../../utils/rut';
 
 interface Props {
   citaEditar?: Cita;
@@ -306,7 +307,7 @@ export const ModalNuevaCita: React.FC<Props> = ({
                     <input
                       type="text"
                       value={form.pacienteRut}
-                      onChange={e => set({ pacienteRut: e.target.value })}
+                      onChange={e => set({ pacienteRut: formatearRutInput(e.target.value) })}
                       placeholder="12.345.678-9"
                       className={`${inputCls} py-2`}
                     />

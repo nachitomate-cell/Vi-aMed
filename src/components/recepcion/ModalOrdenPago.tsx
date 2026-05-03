@@ -46,6 +46,9 @@ interface ModalOrdenPagoProps {
 const formatCLP = (n: number) =>
   n.toLocaleString('es-CL', { minimumFractionDigits: 0 });
 
+const soloNumeros = (codigo?: string) =>
+  (codigo ?? '').match(/^\d+/)?.[0] ?? (codigo || '—');
+
 const calcularEdad = (fechaNac: string): number => {
   if (!fechaNac) return 0;
   const [d, m, y] = fechaNac.includes('/')
@@ -70,36 +73,10 @@ const sexoLabel = (s?: string) => {
   return s;
 };
 
-/* ── estilos inline reutilizables ─────────────────────────── */
-const S = {
-  sectionHeader: {
-    background: '#0E7490',
-    color: 'white',
-    textAlign: 'center' as const,
-    fontWeight: 'bold' as const,
-    fontSize: '9px',
-    padding: '3px 6px',
-    marginBottom: '0',
-    letterSpacing: '0.5px',
-  },
-  th: {
-    padding: '3px 6px',
-    fontWeight: 'bold' as const,
-    color: '#0E7490',
-    borderBottom: '1px solid #ccc',
-    background: '#f0f7fa',
-    fontSize: '8px',
-    whiteSpace: 'nowrap' as const,
-  },
-  td: {
-    padding: '3px 6px',
-    fontSize: '8px',
-    borderBottom: '1px solid #eee',
-  },
-};
 
 const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) => {
   const [cargando, setCargando] = useState(false);
+  const [errorPdf, setErrorPdf] = useState<string | null>(null);
   const [datosCompletos, setDatosCompletos] = useState<OrdenData | null>(null);
   const [cargandoDatos, setCargandoDatos] = useState(true);
 
@@ -149,24 +126,28 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
 
   const prestaciones: Prestacion[] = datos?.prestaciones ?? [];
 
-  const totalGeneral = prestaciones.reduce((acc, p) => {
-    const exento = p.exento ?? p.valor ?? 0;
-    const afecto = p.afecto ?? 0;
-    const iva = p.iva ?? 0;
-    return acc + exento + afecto + iva;
-  }, 0);
+  const esFonasa = datos?.prevision?.toLowerCase().includes('fonasa') ?? false;
+
+  const montoPresta = (p: Prestacion) =>
+    esFonasa && p.copago != null
+      ? p.copago
+      : (p.exento ?? p.valor ?? 0) + (p.afecto ?? 0) + (p.iva ?? 0);
+
+  const totalGeneral = prestaciones.reduce((acc, p) => acc + montoPresta(p), 0);
 
   /* ── Descargar PDF ──────────────────────────────────────── */
   const handleDescargarPDF = async () => {
     setCargando(true);
+    setErrorPdf(null);
     try {
       const prestacionesPayload = prestaciones.map(p => {
-        const exento = p.exento ?? p.valor ?? 0;
-        const afecto = p.afecto ?? 0;
-        const iva    = p.iva ?? 0;
+        const usaCopago = esFonasa && p.copago != null;
+        const exento = usaCopago ? p.copago! : (p.exento ?? p.valor ?? 0);
+        const afecto = usaCopago ? 0 : (p.afecto ?? 0);
+        const iva    = usaCopago ? 0 : (p.iva ?? 0);
         const nombre = p.descripcion || p.nombre || p.prestacion || '';
         return {
-          codigo:      p.codigo ?? '',
+          codigo:      soloNumeros(p.codigo),
           descripcion: nombre.toUpperCase(),
           cantidad:    1,
           exento,
@@ -199,7 +180,10 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
         }),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`El servidor respondió ${res.status}${errBody ? ': ' + errBody : ''}`);
+      }
 
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
@@ -231,7 +215,7 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
       ]);
     } catch (err) {
       console.error('Error generando PDF:', err);
-      alert('No se pudo generar el PDF');
+      setErrorPdf(err instanceof Error ? err.message : 'No se pudo generar el PDF');
     } finally {
       setCargando(false);
     }
@@ -285,6 +269,22 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
           </div>
         </div>
 
+        {/* ── Error PDF ─────────────────────────────────────── */}
+        {errorPdf && (
+          <div className="mx-5 mt-3 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl text-xs font-semibold">
+            <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="flex-1">
+              <strong>No se pudo generar el PDF.</strong> {errorPdf}
+              <br /><span className="font-normal opacity-75">Verifica que el servidor de PDFs esté activo (<code className="bg-red-100 px-1 rounded">npm run dev:api</code>).</span>
+            </span>
+            <button onClick={() => setErrorPdf(null)} className="opacity-50 hover:opacity-100">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
+
         {/* ── Previsualización del documento ────────────────── */}
         <div className="flex-1 overflow-y-auto p-4 bg-slate-100">
           {cargandoDatos ? (
@@ -292,220 +292,133 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
               <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-[#0E7490] animate-spin" />
             </div>
           ) : (
-            /* ─── DOCUMENTO A4 ──────────────────────────────── */
+            /* ─── DOCUMENTO A4 landscape (preview fiel al PDF) ── */
             <div
               className="bg-white mx-auto shadow-lg"
               style={{
-                width: '297mm',
-                minHeight: '210mm',
-                maxHeight: '210mm',
-                padding: '8mm 12mm',
-                fontFamily: 'Arial, Helvetica, sans-serif',
-                fontSize: '9px',
-                color: '#1a1a1a',
+                width: '277mm',
+                minHeight: '190mm',
+                padding: '8mm 11mm',
+                fontFamily: 'Helvetica, Arial, sans-serif',
+                fontSize: '8.5px',
+                color: '#000',
                 boxSizing: 'border-box',
-                lineHeight: '1.3',
+                lineHeight: '1.4',
               }}
             >
-
-              {/* ══ ENCABEZADO (centrado) ══════════════════════ */}
-              <div style={{ textAlign: 'center', marginBottom: '10px', borderBottom: '2px solid #0E7490', paddingBottom: '8px' }}>
+              {/* ══ ENCABEZADO: logo izq + datos empresa der ══ */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '6px' }}>
                 <img
                   src="/logo4.png"
                   alt="Logo ViñaMed"
-                  style={{ width: '90px', height: 'auto', display: 'block', margin: '0 auto 4px auto' }}
-                  crossOrigin="anonymous"
+                  style={{ width: '130px', height: 'auto', flexShrink: 0 }}
                 />
-                <p style={{ fontWeight: 'bold', fontSize: '13px', color: '#0E7490', margin: '0 0 1px 0' }}>ViñaMed</p>
-                <p style={{ fontSize: '9px', color: '#444', margin: '0 0 1px 0' }}>Imagenología y Rehabilitación</p>
-                <p style={{ fontSize: '8px', color: '#555', margin: '0 0 1px 0' }}>Centro médico: Viñamed</p>
-                <p style={{ fontWeight: 'bold', fontSize: '9px', color: '#0E7490', margin: '2px 0 1px 0' }}>RADIODIAGNÓSTICO VIÑA DEL MAR SPA</p>
-                <p style={{ fontSize: '8px', color: '#555', margin: '0 0 1px 0' }}>77.500.907-1</p>
-                <p style={{ fontSize: '8px', color: '#555', margin: '0 0 1px 0' }}>MEDIO ORIENTE #831 OFICINA 408, VIÑA DEL MAR</p>
-                <p style={{ fontSize: '8px', color: '#555', margin: '0' }}>FONO: 9 34222146</p>
+                <div style={{ marginLeft: '10px', marginTop: '4px', fontSize: '8px', lineHeight: '1.6' }}>
+                  <div>RADIODIAGNÓSTICO VIÑA DEL MAR SPA</div>
+                  <div>77.500.907-1</div>
+                  <div>MEDIO ORIENTE #831 OFICINA 408, VIÑA DEL MAR</div>
+                  <div>FONO: 9 34222146</div>
+                </div>
               </div>
 
-              {/* ══ DATOS DE ATENCIÓN ══════════════════════════ */}
-              <div style={S.sectionHeader}>DATOS DE ATENCIÓN</div>
+              {/* Centro médico + fecha emisión */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', marginBottom: '4px' }}>
+                <span>Centro médico: Viñamed</span>
+                <span>Fecha emisión: {hoy}</span>
+              </div>
 
-              {/*
-                Tabla sin encabezados visibles, dos columnas:
-                Col izquierda: Tipo atención / Nombre / Fecha nac. / Sexo / Fecha ingreso
-                Col derecha: RUN / Edad / Teléfono / Fecha emisión
-              */}
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                marginBottom: '8px',
-                border: '1px solid #ddd',
-                fontSize: '8px',
-              }}>
-                <tbody>
-                  {/* Fila 1: Tipo de atención (col izq) — sólo ocupa col izquierda */}
-                  <tr>
-                    <td style={{ padding: '3px 8px', color: '#555', width: '23%', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Tipo de atención</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', width: '27%', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      {datos?.tipoAtencion || 'Ambulatoria'}
-                    </td>
-                    <td style={{ padding: '3px 8px', color: '#555', width: '20%', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>R.U.N</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', width: '30%', borderBottom: '1px solid #eee' }}>
-                      {datos?.pacienteRut || '—'}
-                    </td>
-                  </tr>
-                  {/* Fila 2: Nombre | RUN → ya en fila 1 */}
-                  <tr>
-                    <td style={{ padding: '3px 8px', color: '#555', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Nombre y apellidos</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      {datos?.pacienteNombre || '—'}
-                    </td>
-                    <td style={{ padding: '3px 8px', color: '#555', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Edad</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee' }}>
-                      {datos?.pacienteFechaNacimiento ? `${calcularEdad(datos.pacienteFechaNacimiento)} años` : '—'}
-                    </td>
-                  </tr>
-                  {/* Fila 3: Fecha nacimiento | Teléfono */}
-                  <tr>
-                    <td style={{ padding: '3px 8px', color: '#555', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Fecha de nacimiento</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      {datos?.pacienteFechaNacimiento || '—'}
-                    </td>
-                    <td style={{ padding: '3px 8px', color: '#555', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Teléfono</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee' }}>
-                      {datos?.pacienteTelefono || '—'}
-                    </td>
-                  </tr>
-                  {/* Fila 4: Sexo | Fecha emisión */}
-                  <tr>
-                    <td style={{ padding: '3px 8px', color: '#555', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Sexo</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      {sexoLabel(datos?.pacienteSexo)}
-                    </td>
-                    <td style={{ padding: '3px 8px', color: '#555', borderBottom: '1px solid #eee', borderRight: '1px solid #eee' }}>
-                      <strong>Fecha emisión</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderBottom: '1px solid #eee' }}>
-                      {hoy}
-                    </td>
-                  </tr>
-                  {/* Fila 5: Fecha de ingreso (sólo col izquierda) */}
-                  <tr>
-                    <td style={{ padding: '3px 8px', color: '#555', borderRight: '1px solid #eee' }}>
-                      <strong>Fecha de ingreso</strong>
-                    </td>
-                    <td style={{ padding: '3px 8px', borderRight: '1px solid #eee' }}>
-                      {fechaIngreso}
-                    </td>
-                    <td style={{ padding: '3px 8px', borderRight: '1px solid #eee' }} />
-                    <td style={{ padding: '3px 8px' }} />
-                  </tr>
-                </tbody>
-              </table>
+              {/* Línea */}
+              <hr style={{ border: 'none', borderTop: '0.5px solid #999', margin: '4px 0' }} />
 
-              {/* ══ DETALLE ════════════════════════════════════ */}
-              <div style={{ ...S.sectionHeader, marginBottom: '0' }}>DETALLE</div>
+              {/* ══ DATOS DE ATENCIÓN ══ */}
+              <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', margin: '6px 0' }}>DATOS DE ATENCIÓN</div>
 
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                border: '1px solid #ddd',
-                fontSize: '8px',
-              }}>
-                <thead>
-                  <tr>
-                    <th style={{ ...S.th, textAlign: 'left', width: '70px' }}>Código</th>
-                    <th style={{ ...S.th, textAlign: 'left' }}>Descripción</th>
-                    <th style={{ ...S.th, textAlign: 'center', width: '50px' }}>Cantidad</th>
-                    <th style={{ ...S.th, textAlign: 'right', width: '60px' }}>Exento</th>
-                    <th style={{ ...S.th, textAlign: 'right', width: '55px' }}>Afecto</th>
-                    <th style={{ ...S.th, textAlign: 'right', width: '40px' }}>IVA</th>
-                    <th style={{ ...S.th, textAlign: 'right', width: '60px' }}>TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {prestaciones.length > 0 ? prestaciones.map((p, i) => {
-                    const exento = p.exento ?? p.valor ?? 0;
-                    const afecto = p.afecto ?? 0;
-                    const iva    = p.iva ?? 0;
-                    const total  = exento + afecto + iva;
-                    const nombre = p.descripcion || p.nombre || p.prestacion || '—';
-                    const codigo = p.codigo ?? (nombre.split(' - ')[0] ?? '—');
-                    const desc   = nombre.includes(' - ') ? nombre.split(' - ').slice(1).join(' - ') : nombre;
-                    return (
-                      <tr key={i}>
-                        <td style={{ ...S.td, color: '#0E7490', fontWeight: 'bold' }}>{codigo}</td>
-                        <td style={S.td}>{desc.toUpperCase()}</td>
-                        <td style={{ ...S.td, textAlign: 'center' }}>1</td>
-                        <td style={{ ...S.td, textAlign: 'right' }}>{formatCLP(exento)}</td>
-                        <td style={{ ...S.td, textAlign: 'right' }}>{formatCLP(afecto)}</td>
-                        <td style={{ ...S.td, textAlign: 'right' }}>{formatCLP(iva)}</td>
-                        <td style={{ ...S.td, textAlign: 'right' }}>{formatCLP(total)}</td>
-                      </tr>
-                    );
-                  }) : (
-                    <tr>
-                      <td colSpan={7} style={{ ...S.td, textAlign: 'center', color: '#999', fontStyle: 'italic', borderBottom: 'none' }}>
-                        Sin prestaciones registradas
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              {/* Filas de datos: izquierda (55%) | derecha (45%) */}
+              {[
+                ['Tipo de atención', datos?.tipoAtencion || 'Ambulatoria', 'R.U.N',         datos?.pacienteRut || '—'],
+                ['Nombre y apellidos', datos?.pacienteNombre || '—',       'Edad',           datos?.pacienteFechaNacimiento ? `${calcularEdad(datos.pacienteFechaNacimiento)}` : '—'],
+                ['Fecha de nacimiento', datos?.pacienteFechaNacimiento || '—', 'Teléfono',   datos?.pacienteTelefono || '—'],
+                ['Sexo', sexoLabel(datos?.pacienteSexo),                   'Fecha emisión',  hoy],
+                ['Fecha de ingreso', fechaIngreso,                         '',               ''],
+              ].map(([lbl1, val1, lbl2, val2], i) => (
+                <div key={i} style={{ display: 'flex', marginBottom: '4px', fontSize: '8.5px' }}>
+                  <div style={{ width: '55%', display: 'flex' }}>
+                    <span style={{ width: '115px', flexShrink: 0 }}>{lbl1}</span>
+                    <span style={{ width: '10px', flexShrink: 0 }}>:</span>
+                    <span>{val1}</span>
+                  </div>
+                  <div style={{ width: '45%', display: 'flex' }}>
+                    <span style={{ width: '90px', flexShrink: 0 }}>{lbl2}</span>
+                    {lbl2 && <span style={{ width: '10px', flexShrink: 0 }}>:</span>}
+                    <span>{val2}</span>
+                  </div>
+                </div>
+              ))}
 
-              {/* ── TOTAL (alineado a la derecha, negrita) ──── */}
-              <div style={{
-                textAlign: 'right',
-                fontWeight: 'bold',
-                fontSize: '10px',
-                padding: '5px 6px 3px',
-                borderTop: '2px solid #0E7490',
-                color: '#0E7490',
-                marginBottom: '24px',
-              }}>
+              {/* Línea */}
+              <hr style={{ border: 'none', borderTop: '0.5px solid #999', margin: '6px 0' }} />
+
+              {/* ══ DETALLE ══ */}
+              <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', margin: '6px 0' }}>DETALLE</div>
+              <hr style={{ border: 'none', borderTop: '0.5px solid #999', margin: '0 0 4px 0' }} />
+
+              {/* Encabezado tabla */}
+              <div style={{ display: 'flex', fontWeight: 'bold', fontSize: '8.5px', marginBottom: '2px' }}>
+                <span style={{ width: '70px', flexShrink: 0 }}>Código</span>
+                <span style={{ flex: 1 }}>Descripción</span>
+                <span style={{ width: '55px', flexShrink: 0, textAlign: 'right' }}>Cantidad</span>
+                <span style={{ width: '60px', flexShrink: 0, textAlign: 'right' }}>Exento</span>
+                <span style={{ width: '45px', flexShrink: 0, textAlign: 'right' }}>Afecto</span>
+                <span style={{ width: '28px', flexShrink: 0, textAlign: 'right' }}>IVA</span>
+                <span style={{ width: '60px', flexShrink: 0, textAlign: 'right' }}>TOTAL</span>
+              </div>
+              <hr style={{ border: 'none', borderTop: '0.5px solid #999', margin: '2px 0 4px 0' }} />
+
+              {/* Filas prestaciones */}
+              {prestaciones.length > 0 ? prestaciones.map((p, i) => {
+                const usaCopago = esFonasa && p.copago != null;
+                const exento = usaCopago ? p.copago! : (p.exento ?? p.valor ?? 0);
+                const afecto = usaCopago ? 0 : (p.afecto ?? 0);
+                const iva    = usaCopago ? 0 : (p.iva ?? 0);
+                const total  = exento + afecto + iva;
+                const nombre = p.descripcion || p.nombre || p.prestacion || '—';
+                const codigo = soloNumeros(p.codigo);
+                return (
+                  <div key={i} style={{ display: 'flex', fontSize: '8.5px', marginBottom: '3px' }}>
+                    <span style={{ width: '70px', flexShrink: 0 }}>{codigo}</span>
+                    <span style={{ flex: 1 }}>{nombre.toUpperCase()}</span>
+                    <span style={{ width: '55px', flexShrink: 0, textAlign: 'right' }}>1</span>
+                    <span style={{ width: '60px', flexShrink: 0, textAlign: 'right' }}>{formatCLP(exento)}</span>
+                    <span style={{ width: '45px', flexShrink: 0, textAlign: 'right' }}>{formatCLP(afecto)}</span>
+                    <span style={{ width: '28px', flexShrink: 0, textAlign: 'right' }}>{formatCLP(iva)}</span>
+                    <span style={{ width: '60px', flexShrink: 0, textAlign: 'right' }}>{formatCLP(total)}</span>
+                  </div>
+                );
+              }) : (
+                <div style={{ textAlign: 'center', color: '#555', fontStyle: 'italic', fontSize: '8px', margin: '4px 0' }}>
+                  Sin prestaciones registradas.
+                </div>
+              )}
+
+              <hr style={{ border: 'none', borderTop: '0.5px solid #999', margin: '4px 0' }} />
+
+              {/* Total */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', fontWeight: 'bold', fontSize: '8.5px', marginBottom: '16px' }}>
                 TOTAL ${formatCLP(totalGeneral)}
               </div>
 
-              {/* ══ PIE DE PÁGINA ══════════════════════════════ */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '10px' }}>
-                {/* Método de pago + N° operación */}
-                <div style={{ fontSize: '8px', color: '#444' }}>
-                  {datos?.metodoPago && (
-                    <p style={{ margin: '2px 0' }}>
-                      <strong>Método de pago:</strong> {datos.metodoPago}
-                    </p>
-                  )}
-                  {datos?.nOperacion && (
-                    <p style={{ margin: '2px 0' }}>
-                      <strong>N° de operación:</strong> {datos.nOperacion}
-                    </p>
-                  )}
+              {/* ══ PIE: pago izq + sello der ══ */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '16px' }}>
+                <div style={{ fontSize: '8.5px' }}>
+                  {datos?.metodoPago && <div>Método de pago: {datos.metodoPago}</div>}
+                  {datos?.nOperacion  && <div>N° de operación: {datos.nOperacion}</div>}
                 </div>
-
-                {/* Timbre + firma institucional */}
                 <div style={{ textAlign: 'center' }}>
                   <img
                     src="/timbre.png"
-                    alt="Timbre"
-                    style={{ width: '110px', height: 'auto', display: 'block', margin: '0 auto 4px auto' }}
-                    crossOrigin="anonymous"
+                    alt="Sello"
+                    style={{ width: '90px', height: 'auto', display: 'block', margin: '0 auto' }}
                   />
-                  <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#0E7490', margin: '0 0 1px 0' }}>ViñaMed</p>
-                  <p style={{ fontSize: '7.5px', color: '#555', margin: '0 0 1px 0' }}>Imagenologia y Rehabilitacion</p>
-                  <p style={{ fontSize: '7.5px', color: '#555', margin: '0 0 1px 0' }}>Radiodiagnóstico Viña Del Mar SpA</p>
-                  <p style={{ fontSize: '7.5px', color: '#555', margin: '0' }}>Rut: 77.500.907-1</p>
                 </div>
               </div>
 

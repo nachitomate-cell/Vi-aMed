@@ -23,12 +23,9 @@ const PacientesPage: React.FC = () => {
   
   // Filtros
   const hoy = new Date();
-  const haceUnaSemana = new Date();
-  haceUnaSemana.setDate(hoy.getDate() - 5);
-  
   const formatDateForInput = (d: Date) => d.toISOString().split('T')[0];
-  
-  const [fechaInicio, setFechaInicio] = useState(formatDateForInput(haceUnaSemana));
+
+  const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState(formatDateForInput(hoy));
   const [busqueda, setBusqueda] = useState('');
   
@@ -73,20 +70,23 @@ const PacientesPage: React.FC = () => {
     fetchPacientes();
   }, []);
 
+  const rutNorm = (s: string) => s.replace(/[^0-9kK]/gi, '').toLowerCase();
+
   // Filtrado local
   const filtrados = pacientes.filter(p => {
-    // Filtro por texto
-    const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
-                          p.rut.toLowerCase().includes(busqueda.toLowerCase());
-    
-    // Filtro por fecha (usando fecha de registro)
-    const [yearInicio, monthInicio, dayInicio] = fechaInicio.split('-');
-    const [yearFin, monthFin, dayFin] = fechaFin.split('-');
-    const fInicio = new Date(Number(yearInicio), Number(monthInicio)-1, Number(dayInicio), 0,0,0);
-    const fFin = new Date(Number(yearFin), Number(monthFin)-1, Number(dayFin), 23,59,59);
-    
-    const fRegistro = p.fechaRegistro;
-    const matchFecha = fRegistro >= fInicio && fRegistro <= fFin;
+    const q = busqueda.toLowerCase().trim();
+    const matchBusqueda = !q ||
+      p.nombre.toLowerCase().includes(q) ||
+      rutNorm(p.rut).includes(rutNorm(busqueda));
+
+    let matchFecha = true;
+    if (fechaInicio && fechaFin) {
+      const [yi, mi, di] = fechaInicio.split('-');
+      const [yf, mf, df] = fechaFin.split('-');
+      const fInicio = new Date(Number(yi), Number(mi) - 1, Number(di), 0, 0, 0);
+      const fFin = new Date(Number(yf), Number(mf) - 1, Number(df), 23, 59, 59);
+      matchFecha = p.fechaRegistro >= fInicio && p.fechaRegistro <= fFin;
+    }
 
     return matchBusqueda && matchFecha;
   });
@@ -116,7 +116,7 @@ const PacientesPage: React.FC = () => {
         {/* Filtros */}
         <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Seleccione un rango de fechas.</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Filtrar por fecha de registro (opcional)</label>
             <div className="flex items-center gap-2">
               <input 
                 type="date" 

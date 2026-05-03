@@ -3,6 +3,7 @@ import type { Profesional, RolProfesional } from '../../types/agenda';
 import { actualizarProfesional, toggleActivoProfesional } from '../../services/profesionalesService';
 import { ColorPicker } from './ColorPicker';
 import { useGestionDatos } from '../../hooks/useGestionDatos';
+import { formatearRutInput } from '../../utils/rut';
 
 interface Props {
   profesional: Profesional;
@@ -100,7 +101,7 @@ export const FormEditarProfesional: React.FC<Props> = ({ profesional, onActualiz
             <input
               type="text"
               value={form.rut || ''}
-              onChange={e => set('rut', e.target.value)}
+              onChange={e => set('rut', formatearRutInput(e.target.value))}
               placeholder="Ej: 12.345.678-9"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-[#0E7490] transition-colors"
             />

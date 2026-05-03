@@ -64,34 +64,51 @@ const ROL_MAP: Record<string, string> = {
 
 export async function loginWithCredentials(rut: string, password: string): Promise<LoginResponse> {
   try {
-    // 1. Buscar al profesional por RUT para obtener su email
     const rutNormalizado = normalizarRut(rut);
-    const q = query(collection(dbVinamed, 'profesionales'), where('rut', '==', rutNormalizado));
-    const snap = await getDocs(q);
+    
+    // 1. Buscar primero en la colección de usuarios (staff/admin/recepcion)
+    let userData: any = null;
+    let email = '';
+    let rolRaw = '';
 
-    if (snap.empty) {
-      throw new AuthError('RUT no encontrado. Verifique sus credenciales.');
+    const qUsers = query(collection(dbVinamed, 'usuarios'), where('rut', '==', rutNormalizado));
+    const snapUsers = await getDocs(qUsers);
+
+    if (!snapUsers.empty) {
+      userData = snapUsers.docs[0].data();
+      email = userData.email;
+      rolRaw = userData.rol || userData.role;
+    } else {
+      // 2. Si no es usuario administrativo, buscar en profesionales
+      const qProf = query(collection(dbVinamed, 'profesionales'), where('rut', '==', rutNormalizado));
+      const snapProf = await getDocs(qProf);
+
+      if (!snapProf.empty) {
+        userData = snapProf.docs[0].data();
+        email = userData.email;
+        rolRaw = userData.rol;
+      }
     }
 
-    const doc = snap.docs[0];
-    const data = doc.data();
-    const email = data.email;
+    if (!userData) {
+      throw new AuthError('RUT no encontrado. Verifique sus credenciales.');
+    }
 
     if (!email) {
       throw new AuthError('El usuario no tiene un correo electrónico asociado.');
     }
 
-    // 2. Autenticar en Firebase Auth
+    // 3. Autenticar en Firebase Auth
     const credential = await signInWithEmailAndPassword(authVinamed, email, password);
     const fbUser = credential.user;
 
-    // 3. Devolver el usuario formateado para el contexto de la app
+    // 4. Devolver el usuario formateado
     return {
       user: {
         uid: fbUser.uid,
-        rut: data.rut,
-        name: data.nombre,
-        role: ROL_MAP[data.rol] ?? 'TECNOLOGO_MEDICO'
+        rut: userData.rut || rutNormalizado,
+        name: userData.nombre || userData.name || 'Usuario',
+        role: ROL_MAP[rolRaw?.toLowerCase()] ?? rolRaw ?? 'TECNOLOGO_MEDICO'
       }
     };
   } catch (err: any) {

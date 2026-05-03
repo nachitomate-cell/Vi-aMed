@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CalendarioMini } from '../components/agenda/CalendarioMini';
 import { ListaCitasDia } from '../components/agenda/ListaCitasDia';
 import { ModalNuevaCita } from '../components/agenda/ModalNuevaCita';
@@ -24,8 +24,24 @@ const DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sába
 
 /* ── Componente ───────────────────────────────────────────────────── */
 const AgendaPage: React.FC = () => {
-  const [fechaSel, setFechaSel] = useState<Date>(() => new Date());
-  const [mesCal, setMesCal] = useState<Date>(() => new Date());
+  const [searchParams] = useSearchParams();
+
+  const [fechaSel, setFechaSel] = useState<Date>(() => {
+    const param = searchParams.get('fecha');
+    if (param) {
+      const d = new Date(param + 'T12:00:00');
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  });
+  const [mesCal, setMesCal] = useState<Date>(() => {
+    const param = searchParams.get('fecha');
+    if (param) {
+      const d = new Date(param + 'T12:00:00');
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [modalBloqueoOpen, setModalBloqueoOpen] = useState(false);
   const [citaEditando, setCitaEditando] = useState<Cita | undefined>();

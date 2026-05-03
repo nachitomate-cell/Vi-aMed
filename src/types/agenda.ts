@@ -46,6 +46,9 @@ export interface Cita {
   pacienteRut: string;
   pacienteNombre: string;
   pacienteTelefono: string;
+  pacienteSexo?: string;
+  pacienteFechaNacimiento?: string;
+  pacienteEdad?: string | number;
   profesionalId: string;
   profesionalNombre: string;
   profesionalRol: RolProfesional;

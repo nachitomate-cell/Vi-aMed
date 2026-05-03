@@ -5,6 +5,7 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from '../../lib/firebase';
 import type { RolProfesional } from '../../types/agenda';
+import { formatearRutInput } from '../../utils/rut';
 
 const CONFIG_VINAMED = {
   apiKey:            "AIzaSyBdedhr4yUsc1F665UXeBWBEj03U-ttO6Y",
@@ -153,7 +154,7 @@ const NuevoProfesionalPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="RUT" value={form.rut} onChange={v => set('rut', v)} placeholder="Ej: 12.345.678-9" />
+            <Field label="RUT" value={form.rut} onChange={v => set('rut', formatearRutInput(v))} placeholder="Ej: 12.345.678-9" />
             <Field label="Teléfono" value={form.telefono} onChange={v => set('telefono', v)} placeholder="Ej: +56 9 1234 5678" />
           </div>
         </section>

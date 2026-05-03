@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   collection, query, where, orderBy, onSnapshot, updateDoc, doc, deleteDoc, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import type { EstadoCita } from '../types/agenda';
-import ModalOrdenPago from '../components/recepcion/ModalOrdenPago';
-
-
 import { ESTADO_COLORS, ESTADO_LABELS } from '../types/agenda';
+import ModalOrdenPago from '../components/recepcion/ModalOrdenPago';
 
 /* ── Types ─────────────────────────────────────────────── */
 interface RegistroRecepcion {
@@ -22,11 +20,23 @@ interface RegistroRecepcion {
   box: string;
   nOperacion?: string;
   notas?: string;
-  ordenPagoGenerada?: boolean;
 }
 
 /* ── Constantes ─────────────────────────────────────────── */
 const ESTADOS_OPCIONES: EstadoCita[] = ['Agendado', 'Confirmado', 'En espera', 'En atención', 'Rezagado', 'Finalizado', 'Anulado', 'No asistió'];
+
+const normalizeEstado = (est: string): EstadoCita => {
+  const mapping: Record<string, EstadoCita> = {
+    solicitada: 'Agendado',
+    confirmada: 'Confirmado',
+    realizada: 'En espera',
+    atendido: 'En atención',
+    finalizado: 'Finalizado',
+    cancelada: 'Anulado',
+    no_asistio: 'No asistió',
+  };
+  return mapping[est] || (ESTADOS_OPCIONES.includes(est as EstadoCita) ? (est as EstadoCita) : 'Agendado');
+};
 
 /* ── Selector de estado inline ─────────────────────────── */
 const SelectorEstado: React.FC<{
@@ -34,13 +44,23 @@ const SelectorEstado: React.FC<{
   onChange: (e: EstadoCita) => void;
 }> = ({ value, onChange }) => {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left });
+    }
+    setOpen(o => !o);
+  };
+
   return (
-    <div className="relative">
+    <div>
       <button
-        onClick={(e) => {
-          e.stopPropagation(); // Evitar que el clic en el botón active el edit del paciente
-          setOpen(o => !o);
-        }}
+        ref={btnRef}
+        onClick={handleOpen}
         className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all duration-200 shadow-sm ${ESTADO_COLORS[value] || 'bg-slate-100'}`}
       >
         <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -51,18 +71,21 @@ const SelectorEstado: React.FC<{
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
-          <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-20 overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-200 p-1.5">
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div
+            className="fixed z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-150 p-1.5"
+            style={{ top: pos.top, left: pos.left }}
+          >
             <div className="px-2 py-1.5 mb-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cambiar estado</span>
             </div>
             {ESTADOS_OPCIONES.map(est => (
               <button
                 key={est}
-                onClick={(e) => { 
+                onClick={(e) => {
                   e.stopPropagation();
-                  onChange(est); 
-                  setOpen(false); 
+                  onChange(est);
+                  setOpen(false);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-3 mb-0.5 last:mb-0 ${
                   value === est ? 'bg-slate-50 text-[#0E7490]' : 'text-slate-600 hover:bg-slate-50'
@@ -84,30 +107,16 @@ const RecepcionPage: React.FC = () => {
   const navigate = useNavigate();
   const today = new Date();
   
-  // Calcular lunes y domingo de esta semana
-  const getWeekRange = () => {
-    const d = new Date(today);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // lunes
-    const lunes = new Date(d.setDate(diff));
-    const domingo = new Date(lunes);
-    domingo.setDate(lunes.getDate() + 6);
-    return {
-      lunes: lunes.toISOString().split('T')[0],
-      domingo: domingo.toISOString().split('T')[0]
-    };
-  };
-
-  const { lunes: initialDesde, domingo: initialHasta } = getWeekRange();
   const todayStr = today.toISOString().split('T')[0];
 
   const [registros, setRegistros] = useState<RegistroRecepcion[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const [fechaDesde, setFechaDesde] = useState(initialDesde);
-  const [fechaHasta, setFechaHasta] = useState(initialHasta);
-  const [ordenPagoRegistro, setOrdenPagoRegistro] = useState<RegistroRecepcion | null>(null);
+  const [fechaDesde, setFechaDesde] = useState(todayStr);
+  const [fechaHasta, setFechaHasta] = useState(todayStr);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filtroEstado, setFiltroEstado] = useState<EstadoCita | ''>('');
+  const [modalRegistro, setModalRegistro] = useState<RegistroRecepcion | null>(null);
 
   /* ── Listener Firestore ────────────────────────────────── */
   const cargar = useCallback(() => {
@@ -128,13 +137,12 @@ const RecepcionPage: React.FC = () => {
         pacienteNombre: d.data().pacienteNombre ?? '',
         pacienteRut: d.data().pacienteRut ?? '',
         fecha: d.data().fecha as Timestamp,
-        estado: (d.data().estado ?? 'Agendado') as EstadoCita,
+        estado: normalizeEstado(d.data().estado ?? 'Agendado'),
         tipoAtencion: d.data().tipoAtencion ?? '',
         profesionalNombre: d.data().profesionalNombre ?? '',
         box: d.data().box ?? '',
         nOperacion: d.data().nOperacion ?? '',
         notas: d.data().notas ?? '',
-        ordenPagoGenerada: d.data().ordenPagoGenerada ?? false,
       } as RegistroRecepcion));
       setRegistros(data);
       setLoading(false);
@@ -159,15 +167,22 @@ const RecepcionPage: React.FC = () => {
 
   /* ── Filtros ────────────────────────────────────────────── */
   const filtrados = registros.filter(r => {
-    if (!busqueda.trim()) return true;
-    const q = busqueda.toLowerCase();
-    return (
+    const q = busqueda.toLowerCase().trim();
+    const matchBusqueda = !q || (
       r.pacienteNombre.toLowerCase().includes(q) ||
       r.pacienteRut.toLowerCase().includes(q) ||
       r.tipoAtencion.toLowerCase().includes(q) ||
       (r.nOperacion ?? '').toLowerCase().includes(q)
     );
+    return matchBusqueda && (!filtroEstado || r.estado === filtroEstado);
   });
+
+  const conteoEstados = ESTADOS_OPCIONES.reduce((acc, est) => {
+    acc[est] = registros.filter(r => r.estado === est).length;
+    return acc;
+  }, {} as Record<EstadoCita, number>);
+
+  const esHoy = fechaDesde === todayStr && fechaHasta === todayStr;
 
   const ordenados = [...filtrados].sort((a, b) => {
     const timeA = a.fecha.toMillis();
@@ -185,20 +200,27 @@ const RecepcionPage: React.FC = () => {
   };
 
   return (
+    <>
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Recepción</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Control de atenciones, pagos y estados</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-xs font-semibold text-slate-500 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm">
-            {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-800">Recepción</h1>
+            {esHoy && (
+              <span className="text-[10px] font-bold bg-[#0E7490]/10 text-[#0E7490] border border-[#0E7490]/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Hoy</span>
+            )}
           </div>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {esHoy
+              ? `${registros.length} atención${registros.length !== 1 ? 'es' : ''} programada${registros.length !== 1 ? 's' : ''} para hoy`
+              : 'Control de atenciones, pagos y estados'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/atencion')}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -207,7 +229,7 @@ const RecepcionPage: React.FC = () => {
           </button>
           <button
             onClick={() => navigate('/nuevopaciente', { state: { from: '/recepcion' } })}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#0E7490] hover:bg-[#0c6680] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" />
@@ -216,6 +238,27 @@ const RecepcionPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Stats rápidas del día */}
+      {esHoy && registros.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'En espera', estado: 'En espera' as EstadoCita, color: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'En atención', estado: 'En atención' as EstadoCita, color: 'bg-blue-50 border-blue-200 text-blue-700' },
+            { label: 'Finalizados', estado: 'Finalizado' as EstadoCita, color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+            { label: 'Pendientes', estado: 'Agendado' as EstadoCita, color: 'bg-slate-50 border-slate-200 text-slate-600' },
+          ].map(({ label, estado, color }) => (
+            <button
+              key={estado}
+              onClick={() => setFiltroEstado(filtroEstado === estado ? '' : estado)}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left ${color} ${filtroEstado === estado ? 'ring-2 ring-offset-1 ring-[#0E7490]/40' : 'hover:opacity-80'}`}
+            >
+              <span className="text-xs font-semibold">{label}</span>
+              <span className="text-2xl font-bold tabular-nums">{conteoEstados[estado] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Barra de filtros */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-wrap gap-3 items-end">
@@ -264,8 +307,8 @@ const RecepcionPage: React.FC = () => {
         {/* Atajo: hoy / semana */}
         <div className="flex gap-2">
           <button
-            onClick={() => { setFechaDesde(todayStr); setFechaHasta(todayStr); }}
-            className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-600 hover:border-[#0E7490] hover:text-[#0E7490] transition-colors"
+            onClick={() => { setFechaDesde(todayStr); setFechaHasta(todayStr); setFiltroEstado(''); }}
+            className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors ${esHoy ? 'bg-[#0E7490] text-white border-[#0E7490]' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-[#0E7490] hover:text-[#0E7490]'}`}
           >
             Hoy
           </button>
@@ -276,6 +319,7 @@ const RecepcionPage: React.FC = () => {
               const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
               setFechaDesde(lunes.toISOString().split('T')[0]);
               setFechaHasta(domingo.toISOString().split('T')[0]);
+              setFiltroEstado('');
             }}
             className="px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl text-slate-600 hover:border-[#0E7490] hover:text-[#0E7490] transition-colors"
           >
@@ -284,10 +328,43 @@ const RecepcionPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Chips de estado */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Filtrar:</span>
+        <button
+          onClick={() => setFiltroEstado('')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${filtroEstado === '' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'}`}
+        >
+          Todos ({registros.length})
+        </button>
+        {ESTADOS_OPCIONES.map(est => {
+          const count = conteoEstados[est] ?? 0;
+          if (count === 0 && filtroEstado !== est) return null;
+          return (
+            <button
+              key={est}
+              onClick={() => setFiltroEstado(filtroEstado === est ? '' : est)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${filtroEstado === est ? ESTADO_COLORS[est] + ' border-current' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'}`}
+            >
+              {ESTADO_LABELS[est]} ({count})
+            </button>
+          );
+        })}
+        {filtroEstado && (
+          <button
+            onClick={() => setFiltroEstado('')}
+            className="px-2 py-1.5 rounded-full text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            Limpiar
+          </button>
+        )}
+      </div>
+
       {/* Tabla */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
         {/* Encabezado */}
-        <div className="grid px-5 py-3 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+        <div className="grid px-5 py-3 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest rounded-t-2xl"
           style={{ gridTemplateColumns: '2.5fr 2fr 1.4fr 1.6fr 1.8fr 1fr' }}>
           <span>Paciente</span>
           <span>Prestación</span>
@@ -318,7 +395,12 @@ const RecepcionPage: React.FC = () => {
             <svg className="w-12 h-12 text-slate-200 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            <p className="text-sm text-slate-400">No hay registros para el período seleccionado.</p>
+            <p className="text-sm font-semibold text-slate-500 mb-1">
+              {filtroEstado ? `Sin pacientes con estado "${ESTADO_LABELS[filtroEstado]}"` : esHoy ? 'Sin atenciones para hoy' : 'Sin registros en este período'}
+            </p>
+            <p className="text-xs text-slate-400">
+              {filtroEstado ? 'Prueba con otro filtro de estado' : 'Usa "Nueva Atención" para registrar el primer paciente del día'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -335,7 +417,7 @@ const RecepcionPage: React.FC = () => {
                 <div
                   key={r.id}
                   onClick={() => navigate(`/atencion/${r.id}`)}
-                  className="grid px-5 py-3.5 hover:bg-slate-50/70 transition-all group items-center cursor-pointer border-l-4 border-l-transparent hover:border-l-[#0E7490]"
+                  className="grid px-5 py-3.5 hover:bg-slate-50/70 transition-all group items-center cursor-pointer border-l-4 border-l-transparent hover:border-l-[#0E7490] last:rounded-b-2xl"
                   style={{ gridTemplateColumns: '2.5fr 2fr 1.4fr 1.6fr 1.8fr 1fr' }}
                 >
                   {/* Paciente */}
@@ -416,20 +498,15 @@ const RecepcionPage: React.FC = () => {
 
                   {/* Acciones */}
                   <div className="flex justify-end items-center gap-1">
-                    <div className="relative">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setOrdenPagoRegistro(r); }}
-                        title={r.ordenPagoGenerada ? 'Orden de pago generada' : 'Generar Orden de Pago'}
-                        className={`p-2 rounded-xl transition-all ${r.ordenPagoGenerada ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
-                      >
-                        <svg className="w-4.5 h-4.5" style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                      </button>
-                      {r.ordenPagoGenerada && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-white" />
-                      )}
-                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setModalRegistro(r); }}
+                      title="Descargar Orden de Pago PDF"
+                      className="p-2 rounded-xl text-slate-400 hover:text-[#0E7490] hover:bg-[#0E7490]/10 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEliminar(r.id, r.pacienteNombre); }}
                       title="Eliminar registro"
@@ -447,14 +524,15 @@ const RecepcionPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal Orden de Pago */}
-      {ordenPagoRegistro && (
-        <ModalOrdenPago
-          registro={ordenPagoRegistro}
-          onCerrar={() => setOrdenPagoRegistro(null)}
-        />
-      )}
     </div>
+
+    {modalRegistro && (
+      <ModalOrdenPago
+        registro={modalRegistro}
+        onCerrar={() => setModalRegistro(null)}
+      />
+    )}
+    </>
   );
 };
 

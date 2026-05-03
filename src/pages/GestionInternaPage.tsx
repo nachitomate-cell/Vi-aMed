@@ -9,6 +9,9 @@ interface DataItem {
   id: string;
   nombre: string;
   activo?: boolean;
+  rol?: string;
+  email?: string;
+  rut?: string;
   [key: string]: any;
 }
 
@@ -26,7 +29,7 @@ const GestionInternaPage: React.FC = () => {
     { id: 'previsiones', label: 'Previsiones', collectionName: 'gestion_previsiones' },
     { id: 'metodos_pago', label: 'Métodos de pago', collectionName: 'gestion_metodos_pago' },
     { id: 'sexos', label: 'Sexos', collectionName: 'gestion_sexos' },
-    { id: 'usuarios', label: 'Usuarios', collectionName: 'usuarios' }
+    { id: 'usuarios', label: 'Usuarios / Profesionales', collectionName: 'profesionales' }
   ];
 
   const currentTab = TABS.find(t => t.id === activeTab)!;
@@ -113,6 +116,16 @@ const GestionInternaPage: React.FC = () => {
     }
   };
 
+  const handleRoleChange = async (id: string, newRole: string) => {
+    try {
+      await updateDoc(doc(db, currentTab.collectionName, id), { rol: newRole });
+      setItems(items.map(i => i.id === id ? { ...i, rol: newRole } : i));
+    } catch (e) {
+      console.error(e);
+      alert('Error al actualizar rol');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Está seguro de eliminar este registro?')) return;
     try {
@@ -148,24 +161,48 @@ const GestionInternaPage: React.FC = () => {
       {/* Contenido */}
       <div className="flex-1 max-w-5xl mx-auto w-full p-6 flex flex-col gap-5 items-start">
 
-        {/* Acceso rápido a Prestaciones */}
-        <button
-          onClick={() => navigate('/prestaciones')}
-          className="w-full flex items-center gap-4 px-5 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-[#0E7490] hover:shadow-md transition-all group text-left"
-        >
-          <div className="w-10 h-10 rounded-xl bg-[#0E7490]/10 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[#0E7490]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        {/* Accesos rápidos */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/prestaciones')}
+            className="flex items-center gap-4 px-5 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-[#0E7490] hover:shadow-md transition-all group text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#0E7490]/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#0E7490]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800 group-hover:text-[#0E7490] transition-colors">Prestaciones</p>
+              <p className="text-xs text-slate-500 mt-0.5">Aranceles, códigos, previsiones y copagos por servicio clínico</p>
+            </div>
+            <svg className="w-4 h-4 text-slate-400 group-hover:text-[#0E7490] transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-800 group-hover:text-[#0E7490] transition-colors">Prestaciones</p>
-            <p className="text-xs text-slate-500 mt-0.5">Aranceles, códigos, previsiones y copagos por servicio clínico</p>
-          </div>
-          <svg className="w-4 h-4 text-slate-400 group-hover:text-[#0E7490] transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+          </button>
+
+          <button
+            onClick={() => navigate('/plantillas-eco')}
+            className="flex items-center gap-4 px-5 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-[#0E7490] hover:shadow-md transition-all group text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-800 group-hover:text-[#0E7490] transition-colors">Plantillas Ecografía</p>
+              <p className="text-xs text-slate-500 mt-0.5">Textos predeterminados de hallazgos e impresión por prestación</p>
+            </div>
+            <svg className="w-4 h-4 text-slate-400 group-hover:text-[#0E7490] transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
 
         <div className="w-full flex gap-8 items-start">
         
@@ -207,23 +244,37 @@ const GestionInternaPage: React.FC = () => {
 
           <div className="p-5 flex-1 overflow-y-auto">
             {/* Formulario Crear */}
-            <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4 flex gap-3 shadow-sm">
-              <input 
-                type="text"
-                placeholder={`Nuevo registro de ${currentTab.label.toLowerCase()}...`}
-                value={nuevoValor}
-                onChange={e => setNuevoValor(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] focus:ring-1 focus:ring-[#0E7490]/20"
-              />
-              <button 
-                onClick={handleCreate}
-                disabled={!nuevoValor.trim()}
-                className="px-5 py-2 bg-[#0E7490] hover:bg-[#0C4A6E] text-white text-sm font-bold rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                + Agregar
-              </button>
-            </div>
+            {activeTab === 'usuarios' ? (
+              <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row gap-3 items-center justify-between shadow-sm">
+                <span className="text-sm text-slate-600 font-medium">
+                  Para registrar un nuevo profesional o usuario administrativo con acceso completo y credenciales:
+                </span>
+                <button 
+                  onClick={() => navigate('/nuevo-profesional')}
+                  className="px-5 py-2.5 bg-[#0E7490] hover:bg-[#0C4A6E] text-white text-sm font-bold rounded-lg shadow-md transition-colors whitespace-nowrap"
+                >
+                  + Agregar Registro Completo
+                </button>
+              </div>
+            ) : (
+              <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4 flex gap-3 shadow-sm">
+                <input 
+                  type="text"
+                  placeholder={`Nuevo registro de ${currentTab.label.toLowerCase()}...`}
+                  value={nuevoValor}
+                  onChange={e => setNuevoValor(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                  className="flex-1 bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-800 focus:outline-none focus:border-[#0E7490] focus:ring-1 focus:ring-[#0E7490]/20"
+                />
+                <button 
+                  onClick={handleCreate}
+                  disabled={!nuevoValor.trim()}
+                  className="px-5 py-2 bg-[#0E7490] hover:bg-[#0C4A6E] text-white text-sm font-bold rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  + Agregar
+                </button>
+              </div>
+            )}
 
             {/* Listado */}
             {loading ? (
@@ -257,14 +308,34 @@ const GestionInternaPage: React.FC = () => {
                         >
                           <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform ${item.activo !== false ? 'translate-x-5' : 'translate-x-0'}`} />
                         </button>
-                        <span className={`font-semibold text-sm transition-opacity truncate ${item.activo !== false ? 'text-slate-700' : 'text-slate-400 italic opacity-60'}`}>
-                          {item.nombre}
-                          {item.activo === false && <span className="ml-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">(Desactivado)</span>}
-                        </span>
+                        <div className="flex flex-col min-w-0">
+                          <span className={`font-semibold text-sm transition-opacity truncate ${item.activo !== false ? 'text-slate-700' : 'text-slate-400 italic opacity-60'}`}>
+                            {item.nombre}
+                            {item.activo === false && <span className="ml-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">(Desactivado)</span>}
+                          </span>
+                          {activeTab === 'usuarios' && (item.email || item.rut) && (
+                            <span className="text-xs text-slate-400 truncate">
+                              {item.rut} {item.rut && item.email ? '·' : ''} {item.email}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
 
-                    <div className="flex gap-1">
+                    <div className="flex gap-2 items-center">
+                      {activeTab === 'usuarios' && (
+                        <select
+                          value={(item.rol || item.role || 'TECNOLOGO_MEDICO').toUpperCase().replace('MEDICO', 'MEDICO_RADIOLOGO').replace('TECNOLOGO', 'TECNOLOGO_MEDICO').replace('_RADIOLOGO_RADIOLOGO', '_RADIOLOGO').replace('_MEDICO_MEDICO', '_MEDICO')}
+                          onChange={(e) => handleRoleChange(item.id, e.target.value)}
+                          className="mr-3 bg-slate-50 border border-slate-200 text-xs text-slate-600 rounded-lg px-2 py-1 outline-none focus:border-[#0E7490]"
+                        >
+                          <option value="ADMIN">Admin</option>
+                          <option value="SECRETARIA">Recepción / Secretaría</option>
+                          <option value="MEDICO_RADIOLOGO">Médico Radiólogo</option>
+                          <option value="TECNOLOGO_MEDICO">Tecnólogo Médico</option>
+                          <option value="ENFERMERO">Enfermería</option>
+                        </select>
+                      )}
                       {editandoId === item.id ? (
                         <>
                           <button 

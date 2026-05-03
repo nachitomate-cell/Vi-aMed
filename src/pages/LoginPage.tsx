@@ -183,7 +183,7 @@ const LoginPage: React.FC = () => {
   // o refrescar, el AuthContext se encargará de la persistencia.
 
   const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setRut(e.target.value);
+    setRut(formatRut(e.target.value));
     if (authError) setAuthError(null);
   };
 

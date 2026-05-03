@@ -13,7 +13,10 @@ const printer = new PdfPrinter({
 });
 
 module.exports = (req, res) => {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).end('Method Not Allowed');
+  }
   try {
     const datos = req.body;
     if (!datos || typeof datos !== 'object') {
@@ -24,12 +27,12 @@ module.exports = (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `inline; filename="OrdenPago_${sanitize(datos.run)}.pdf"`
+      `attachment; filename="OrdenPago_${sanitize(datos.run)}.pdf"`
     );
     pdfDoc.pipe(res);
     pdfDoc.end();
   } catch (err) {
-    console.error('Error generando PDF:', err);
+    console.error('[orden-pago]', err);
     res.status(500).json({ error: 'Error interno', detalle: err.message });
   }
 };

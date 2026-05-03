@@ -50,6 +50,25 @@ const DesktopLayout: React.FC = () => {
   const saludo = useMemo(getSaludo, []);
   const nombreCorto = user?.name?.split(' ')[0] ?? 'Usuario';
   const iniciales = getIniciales(user?.name ?? 'U');
+  
+  // RBAC Flags
+  const role = user?.role?.toUpperCase() || '';
+  const isAdmin = role === 'ADMIN';
+  const isSecretaria = role === 'SECRETARIA' || role === 'RECEPCION';
+  const isMedico = role === 'MEDICO_RADIOLOGO' || role === 'MEDICO';
+  const isTecnologo = role === 'TECNOLOGO_MEDICO' || role === 'TECNOLOGO';
+  const isEnfermero = role === 'ENFERMERO' || role === 'ENFERMERIA';
+
+  const canSeeAgenda = isAdmin || isSecretaria || isMedico || isTecnologo || isEnfermero;
+  const canSeeRecepcion = isAdmin || isSecretaria || isEnfermero;
+  const canSeeBoxMedicina = isAdmin || isMedico || isEnfermero;
+  const canSeeBoxEco = isAdmin || isMedico || isTecnologo || isEnfermero;
+  const canSeeBoxEnf = isAdmin || isEnfermero;
+  const canSeeSetm = isAdmin || isEnfermero || isTecnologo || isSecretaria;
+  const canSeeValidar = isAdmin || isMedico || isSecretaria || isEnfermero;
+  const canSeeProtocolos = isAdmin || isMedico || isEnfermero;
+  const canSeePacientes = isAdmin || isSecretaria || isMedico || isTecnologo || isEnfermero;
+  const canSeeAdmin = isAdmin || isEnfermero;
 
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
 
@@ -143,28 +162,32 @@ const DesktopLayout: React.FC = () => {
                   </>
                 )}
               </NavLink>
-              <NavLink to="/agenda" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Agenda
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/recepcion" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                    Recepción
-                  </>
-                )}
-              </NavLink>
+              {canSeeAgenda && (
+                <NavLink to="/agenda" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Agenda
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeeRecepcion && (
+                <NavLink to="/recepcion" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                      Recepción
+                    </>
+                  )}
+                </NavLink>
+              )}
             </div>
           </div>
 
@@ -172,63 +195,73 @@ const DesktopLayout: React.FC = () => {
           <div style={{ marginBottom: 20 }}>
             <SectionLabel>Clínica</SectionLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <NavLink to="/atencion-medica" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    Box Medicina
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/box-ecografia" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <ellipse cx="12" cy="12" rx="10" ry="6" /><path d="M12 6c2 3.5 2 8.5 0 12" /><path d="M2 12h20" />
-                    </svg>
-                    Box Ecografía
-                    <span className={badgeClasses}>1</span>
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/box-enfermeria" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                    </svg>
-                    Box Enfermería
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/validar-informe" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                    </svg>
-                    Validar Informe
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/setm" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 2v6l3 3-7 7-7-7 3-3V2" /><line x1="14" y1="2" x2="10" y2="2" />
-                    </svg>
-                    Toma de Muestras
-                    <span className={badgeClasses}>2</span>
-                  </>
-                )}
-              </NavLink>
+              {canSeeBoxMedicina && (
+                <NavLink to="/atencion-medica" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      Box Medicina
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeeBoxEco && (
+                <NavLink to="/box-ecografia" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <ellipse cx="12" cy="12" rx="10" ry="6" /><path d="M12 6c2 3.5 2 8.5 0 12" /><path d="M2 12h20" />
+                      </svg>
+                      Box Ecografía
+                      <span className={badgeClasses}>1</span>
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeeBoxEnf && (
+                <NavLink to="/box-enfermeria" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                      </svg>
+                      Box Enfermería
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeeValidar && (
+                <NavLink to="/validar-informe" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                      </svg>
+                      Validar Informe
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeeSetm && (
+                <NavLink to="/setm" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 2v6l3 3-7 7-7-7 3-3V2" /><line x1="14" y1="2" x2="10" y2="2" />
+                      </svg>
+                      Toma de Muestras
+                      <span className={badgeClasses}>2</span>
+                    </>
+                  )}
+                </NavLink>
+              )}
               {/* <NavLink to="/mamografia" className={navLinkClasses}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path d="M21 12c0 1.2-4.03 6-9 6s-9-4.8-9-6c0-1.2 4.03-6 9-6s9 4.8 9 6Z" />
@@ -242,29 +275,56 @@ const DesktopLayout: React.FC = () => {
           {/* Gestión */}
           <div>
             <SectionLabel>Gestión</SectionLabel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <NavLink to="/profesionales" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Profesionales
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/inventario" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                    </svg>
-                    Inventario / REAS
-                  </>
-                )}
-              </NavLink>
+            {canSeeAdmin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <NavLink to="/profesionales" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Profesionales
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/inventario" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                      </svg>
+                      Inventario / REAS
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/reportes" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+                      </svg>
+                      Reportes
+                    </>
+                  )}
+                </NavLink>
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '12px 16px' }} />
+                <NavLink to="/gestion" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Gestión interna
+                    </>
+                  )}
+                </NavLink>
+              </div>
+            )}
+            {canSeeProtocolos && (
               <NavLink to="/protocolos" className={navLinkClasses}>
                 {({ isActive }) => (
                   <>
@@ -276,52 +336,33 @@ const DesktopLayout: React.FC = () => {
                   </>
                 )}
               </NavLink>
-              <NavLink to="/reportes" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-                    </svg>
-                    Reportes
-                  </>
-                )}
-              </NavLink>
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '12px 16px' }} />
-              <NavLink to="/gestion" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Gestión interna
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/pacientes" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    Pacientes
-                  </>
-                )}
-              </NavLink>
-              <NavLink to="/nuevopaciente" className={navLinkClasses}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <div className={activeIndicatorClasses} />}
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" />
-                    </svg>
-                    Nuevo Paciente
-                  </>
-                )}
-              </NavLink>
-            </div>
+            )}
+            {canSeePacientes && (
+              <>
+                <NavLink to="/pacientes" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      Pacientes
+                    </>
+                  )}
+                </NavLink>
+                <NavLink to="/nuevopaciente" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" />
+                      </svg>
+                      Nuevo Paciente
+                    </>
+                  )}
+                </NavLink>
+              </>
+            )}
           </div>
         </nav>
 
