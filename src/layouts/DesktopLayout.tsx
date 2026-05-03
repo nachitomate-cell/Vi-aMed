@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Omnibox } from '../components/shared/Omnibox';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,18 @@ const DesktopLayout: React.FC = () => {
   const nombreCorto = user?.name?.split(' ')[0] ?? 'Usuario';
   const iniciales = getIniciales(user?.name ?? 'U');
   
+  const [darkMode, setDarkMode] = React.useState(() => localStorage.getItem('vinamed-dark-mode') === 'true');
+
+  React.useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('vinamed-dark-mode', 'true');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('vinamed-dark-mode', 'false');
+    }
+  }, [darkMode]);
+  
   // RBAC Flags
   const role = user?.role?.toUpperCase() || '';
   const isAdmin = role === 'ADMIN';
@@ -69,6 +82,7 @@ const DesktopLayout: React.FC = () => {
   const canSeeProtocolos = isAdmin || isMedico || isEnfermero;
   const canSeePacientes = isAdmin || isSecretaria || isMedico || isTecnologo || isEnfermero;
   const canSeeAdmin = isAdmin || isEnfermero;
+  const canSeeGenerarPdf = isAdmin || isSecretaria || isTecnologo;
 
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
 
@@ -258,6 +272,19 @@ const DesktopLayout: React.FC = () => {
                       </svg>
                       Toma de Muestras
                       <span className={badgeClasses}>2</span>
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeeGenerarPdf && (
+                <NavLink to="/generar" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                      </svg>
+                      Generar PDF
                     </>
                   )}
                 </NavLink>
@@ -464,15 +491,43 @@ const DesktopLayout: React.FC = () => {
           flexShrink: 0,
         }}>
           {/* Saludo dinámico */}
-          <div>
+          <div style={{ flex: '0 1 200px' }}>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>{saludo},</p>
             <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
               {nombreCorto}
             </p>
           </div>
 
+          <div style={{ flex: '1 1 auto', display: 'flex', justifyContent: 'center', padding: '0 24px' }}>
+            <Omnibox />
+          </div>
+
           {/* Acciones derecha */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '0 1 200px', justifyContent: 'flex-end' }}>
+            
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{
+                width: 36, height: 36, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--surface-page)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--surface-card-border)',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}
+              title={darkMode ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {darkMode ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+              )}
+            </button>
             {/* Badge modo protegido */}
             <div style={{
               fontSize: 11,

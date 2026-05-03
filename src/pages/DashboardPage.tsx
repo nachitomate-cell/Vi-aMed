@@ -4,9 +4,6 @@ import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 
 import { db } from '../lib/firebase';
 import { esMobile } from '../utils/device';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-type BoxState = 'available' | 'busy' | 'maintenance';
-
 // ─── Helpers de fecha ─────────────────────────────────────────────────────────
 const DIAS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const MESES_ES = [
@@ -56,17 +53,7 @@ const KpiCard: React.FC<{ label: string; valor: string; sub: string; accent?: bo
   </div>
 );
 
-// ─── Box Status dot ───────────────────────────────────────────────────────────
-const DOT_COLORS: Record<BoxState, string> = {
-  available:   'var(--color-success)',
-  busy:        'var(--color-danger)',
-  maintenance: 'var(--color-warning)',
-};
-const BOX_LABELS: Record<BoxState, string> = {
-  available:   'Disponible',
-  busy:        'Ocupado',
-  maintenance: 'En mantención',
-};
+
 
 // ─── Acceso Rápido Card ───────────────────────────────────────────────────────
 const QuickCard: React.FC<{
@@ -156,6 +143,7 @@ const DashboardPage: React.FC = () => {
     muestras: 0,
     procedimientos: 0,
   });
+  const [proximasCitas, setProximasCitas] = useState<any[]>([]);
 
   useEffect(() => {
     const start = new Date();
@@ -188,6 +176,11 @@ const DashboardPage: React.FC = () => {
         muestras: muestras,
         procedimientos: proc,
       });
+
+      const pendientes = docs
+        .filter(c => c.estado !== 'realizada' && c.estado !== 'cancelada' && c.estado !== 'no_asistio')
+        .sort((a, b) => a.fecha.toMillis() - b.fecha.toMillis());
+      setProximasCitas(pendientes.slice(0, 4));
     });
     return () => unsub();
   }, []);
@@ -199,24 +192,7 @@ const DashboardPage: React.FC = () => {
     }
   }, [navigate]);
 
-  const [boxes, setBoxes] = useState<Record<string, BoxState>>({
-    eco: 'available',
-    enf: 'available',
-    muestras: 'available',
-  });
 
-  const toggleBox = (key: string) => {
-    setBoxes(prev => ({
-      ...prev,
-      [key]: prev[key] === 'available' ? 'busy' : 'available',
-    }));
-  };
-
-  const boxLabel: Record<string, string> = {
-    eco: 'Box Ecografía',
-    enf: 'Box de Medicina',
-    muestras: 'Sala Muestras',
-  };
 
   const sectionLabel = (text: string) => (
     <p style={{
@@ -252,7 +228,7 @@ const DashboardPage: React.FC = () => {
         <KpiCard label="Procedimientos" valor={stats.procedimientos.toString()} sub="Medicina"       />
       </div>
 
-      {/* ── Estado de Boxes ───────────────────────────────────────── */}
+      {/* ── Próximas Atenciones ───────────────────────────────────────── */}
       <div style={{
         background: 'var(--surface-card)',
         border: '0.5px solid var(--surface-card-border)',
@@ -260,46 +236,38 @@ const DashboardPage: React.FC = () => {
         padding: '20px 24px',
         marginBottom: 24,
       }}>
-        {sectionLabel('Estado de Boxes')}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {Object.entries(boxes).map(([key, state]) => (
-            <button
-              key={key}
-              onClick={() => toggleBox(key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                background: '#F8FAFC',
-                border: '0.5px solid var(--surface-card-border)',
-                borderRadius: 10,
-                padding: '12px 16px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'border-color 0.15s',
-              }}
-              onMouseOver={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = DOT_COLORS[state]; }}
-              onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--surface-card-border)'; }}
-            >
-              <span style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                flexShrink: 0,
-                background: DOT_COLORS[state],
-                boxShadow: `0 0 0 3px ${DOT_COLORS[state]}22`,
-              }} />
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-                  {boxLabel[key]}
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
-                  {BOX_LABELS[state]}
-                </p>
-              </div>
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          {sectionLabel('Próximas atenciones para hoy')}
+          <button onClick={() => navigate('/agenda')} style={{ fontSize: 11, color: 'var(--color-primary)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Ver agenda completa →</button>
         </div>
+        {proximasCitas.length === 0 ? (
+           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>No hay pacientes pendientes para el resto del día.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {proximasCitas.map(cita => {
+              const fecha = (cita.fecha as any)?.toDate?.();
+              const horaStr = fecha ? fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '—';
+              return (
+                <div key={cita.id} style={{
+                  background: '#F8FAFC',
+                  border: '0.5px solid var(--surface-card-border)',
+                  borderRadius: 10,
+                  padding: '12px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{horaStr}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 10, background: 'rgba(14,116,144,0.1)', color: 'var(--color-primary)' }}>{cita.box || 'Sin Box'}</span>
+                  </div>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: '4px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cita.pacienteNombre}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cita.tipoAtencion}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Acceso Rápido ─────────────────────────────────────────── */}

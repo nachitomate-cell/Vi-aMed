@@ -5,7 +5,9 @@ import { Resend } from 'resend';
 if (admin.apps.length === 0) {
   admin.initializeApp();
 }
-export { crearProfesional } from './crearProfesional';
+export { crearProfesional }      from './crearProfesional';
+export { enviarPdfEcografia }   from './enviarPdfEcografia';
+export { limpiarPdfsExpirados } from './limpiarPdfsExpirados';
 
 // HTML Email Template
 function generarEmailHTML(nombre: string, resetLink: string): string {

@@ -43,3 +43,25 @@
   /* Sidebar ancho */
   --sidebar-width:        256px;
 }
+
+html.dark {
+  /* Primario del sistema en dark mode */
+  --color-primary:        #38BDF8;
+  --color-primary-dark:   #0284C7;
+  --color-primary-darker: #0C4A6E;
+  --color-primary-light:  rgba(56, 189, 248, 0.15);
+
+  /* Superficies */
+  --surface-page:         #0F172A;
+  --surface-card:         #1E293B;
+  --surface-card-border:  #334155;
+
+  /* Texto */
+  --text-primary:         #F8FAFC;
+  --text-secondary:       #94A3B8;
+  --text-muted:           #64748B;
+
+  /* Header */
+  --header-bg:            #1E293B;
+  --header-border:        #334155;
+}

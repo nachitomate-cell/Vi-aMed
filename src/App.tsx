@@ -33,6 +33,7 @@ import RecepcionPage from './pages/RecepcionPage';
 import AgendaProfesionalPage from './pages/agenda/AgendaProfesionalPage';
 import PacienteDetallePage from './pages/PacienteDetallePage';
 import CambiarContrasenaPage from './pages/CambiarContrasenaPage';
+import GenerarPdfPage from './pages/GenerarPdfPage';
 // const MamografiaPage = lazy(() => import('./pages/mamografia'));
 // const MamografiaMobilePage = lazy(() => import('./pages/mamografia-mobile'));
 const ActivarCuenta = lazy(() => import('./pages/activar-cuenta'));
@@ -113,6 +114,7 @@ const AppRoutes: React.FC = () => (
       <Route path="profesionales" element={<ProfesionalesPage />} />
       <Route path="profesionales/:profesionalId" element={<ProfesionalPerfilPage />} />
       <Route path="nuevo-profesional" element={<NuevoProfesionalPage />} />
+      <Route path="generar" element={<GenerarPdfPage />} />
       {/* <Route
         path="mamografia"
         element={
