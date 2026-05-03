@@ -82,7 +82,7 @@ const DesktopLayout: React.FC = () => {
   const canSeeProtocolos = isAdmin || isMedico || isEnfermero;
   const canSeePacientes = isAdmin || isSecretaria || isMedico || isTecnologo || isEnfermero;
   const canSeeAdmin = isAdmin || isEnfermero;
-  const canSeeGenerarPdf = isAdmin || isSecretaria || isTecnologo;
+  const canSeeGenerarPdf = isAdmin || isSecretaria || isTecnologo || isEnfermero;
 
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
 

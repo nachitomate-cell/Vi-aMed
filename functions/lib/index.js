@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.registrarProfesional = exports.recuperarContrasena = exports.crearProfesional = void 0;
+exports.registrarProfesional = exports.recuperarContrasena = exports.limpiarPdfsExpirados = exports.enviarPdfEcografia = exports.crearProfesional = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const resend_1 = require("resend");
@@ -32,6 +32,10 @@ if (admin.apps.length === 0) {
 }
 var crearProfesional_1 = require("./crearProfesional");
 Object.defineProperty(exports, "crearProfesional", { enumerable: true, get: function () { return crearProfesional_1.crearProfesional; } });
+var enviarPdfEcografia_1 = require("./enviarPdfEcografia");
+Object.defineProperty(exports, "enviarPdfEcografia", { enumerable: true, get: function () { return enviarPdfEcografia_1.enviarPdfEcografia; } });
+var limpiarPdfsExpirados_1 = require("./limpiarPdfsExpirados");
+Object.defineProperty(exports, "limpiarPdfsExpirados", { enumerable: true, get: function () { return limpiarPdfsExpirados_1.limpiarPdfsExpirados; } });
 function generarEmailHTML(nombre, resetLink) {
     return `
     <!DOCTYPE html>
