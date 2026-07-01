@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { isSignInWithEmailLink, signInWithEmailLink, updatePassword } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { authVinamed, dbVinamed } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
 
 export default function ActivarCuenta() {
+  const dialog = useDialog();
   const [estado, setEstado] = useState<'verificando' | 'formulario' | 'link-invalido'>('verificando');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -32,8 +34,10 @@ export default function ActivarCuenta() {
       // Pero asumiendo que lo pasamos en el URL o lo solicitamos
       let email = window.localStorage.getItem('emailForSignIn');
       if (!email) {
-        // Obtenemos el email por prompt si no está en el local storage
-        email = window.prompt('Por favor ingresa tu correo electrónico para confirmación');
+        // Obtenemos el email con un modal propio si no está en el local storage
+        email = await dialog.prompt('Por favor ingresa tu correo electrónico para confirmación', {
+          title: 'Confirmar correo', placeholder: 'correo@ejemplo.cl', confirmText: 'Confirmar',
+        });
       }
 
       if (!email) {
@@ -51,7 +55,7 @@ export default function ActivarCuenta() {
 
         // Marcar como activo en Firestore
         await updateDoc(
-          doc(dbVinamed, 'profesionales', cred.user.uid), {
+          doc(dbVinamed, 'usuarios', cred.user.uid), {
             estado: 'active',
             activadoEn: serverTimestamp(),
           }

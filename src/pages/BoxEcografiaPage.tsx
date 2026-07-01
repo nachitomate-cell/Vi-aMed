@@ -50,6 +50,32 @@ const parsearTipoAtencion = (tipoAtencion: string): { codigo: string; tipo: stri
 const iniciales = (nombre: string) =>
   nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('');
 
+const quitarCodigo = (s: string) => (s.includes(' - ') ? s.split(' - ').slice(1).join(' - ').trim() : s);
+
+/**
+ * Busca la plantilla que corresponde a un examen.
+ * 1) Por prestacionId (vínculo exacto, lo más confiable).
+ * 2) Por nombre, ignorando el código (la key de la plantilla incluye el código,
+ *    el examen de la planilla normalmente no).
+ * Devuelve la KEY (id del doc plantillas_eco) o null.
+ */
+function buscarPlantillaKey(
+  examen: string,
+  prestacionId: string | undefined,
+  keys: Set<string>,
+  porPrestacion: Map<string, string>,
+): string | null {
+  if (prestacionId && porPrestacion.has(prestacionId)) return porPrestacion.get(prestacionId)!;
+  const nombreKey = makeKeyPlantilla(quitarCodigo(examen || ''));
+  if (nombreKey) {
+    if (keys.has(nombreKey)) return nombreKey;
+    for (const k of keys) if (k.endsWith('_' + nombreKey)) return k;
+  }
+  const fullKey = makeKeyPlantilla(examen || '');
+  if (fullKey && keys.has(fullKey)) return fullKey;
+  return null;
+}
+
 const formatFechaDia = (date: Date) =>
   date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -72,6 +98,8 @@ const BoxEcografiaPage: React.FC = () => {
   const [prefilledKeys, setPrefilledKeys] = useState<Set<keyof DatosInformeEco>>(new Set());
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [plantillasKeys, setPlantillasKeys] = useState<Set<string>>(new Set());
+  const [plantillaPorPrest, setPlantillaPorPrest] = useState<Map<string, string>>(new Map());
+  const [prestacionIdActual, setPrestacionIdActual] = useState<string | undefined>(undefined);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -82,6 +110,9 @@ const BoxEcografiaPage: React.FC = () => {
   useEffect(() => {
     getDocs(collection(db, 'plantillas_eco')).then(snap => {
       setPlantillasKeys(new Set(snap.docs.map(d => d.id)));
+      const m = new Map<string, string>();
+      snap.docs.forEach(d => { const pid = (d.data() as any).prestacionId; if (pid) m.set(pid, d.id); });
+      setPlantillaPorPrest(m);
     }).catch(() => {});
   }, []);
 
@@ -154,22 +185,14 @@ const BoxEcografiaPage: React.FC = () => {
     !!form.nombre && !!form.tipo && form.hallazgos.trim().length > 0 && form.diagnostico.trim().length > 0;
 
   useEffect(() => {
-    if (!form.tipo && !prestacionRaw) { setPlantillaActual(null); return; }
-    // prestacionRaw puede ser "CODE - Nombre" (completo) o sólo "Nombre"
-    const rawSinCodigo = prestacionRaw.includes(' - ')
-      ? prestacionRaw.split(' - ').slice(1).join(' - ').trim()
-      : prestacionRaw;
-    const keysToTry = Array.from(new Set([
-      prestacionRaw ? makeKeyPlantilla(prestacionRaw) : '',
-      rawSinCodigo ? makeKeyPlantilla(rawSinCodigo) : '',
-      makeKeyPlantilla(form.tipo),
-    ])).filter(Boolean);
-
-    Promise.all(keysToTry.map(k => getDoc(doc(db, 'plantillas_eco', k))))
-      .then(snaps => {
-        const found = snaps.find(s => s.exists());
-        if (found) {
-          const d = found.data() as any;
+    const examen = prestacionRaw || form.tipo;
+    if (!examen) { setPlantillaActual(null); return; }
+    const key = buscarPlantillaKey(examen, prestacionIdActual, plantillasKeys, plantillaPorPrest);
+    if (!key) { setPlantillaActual(null); return; }
+    getDoc(doc(db, 'plantillas_eco', key))
+      .then(s => {
+        if (s.exists()) {
+          const d = s.data() as any;
           setPlantillaActual({
             hallazgos: d.hallazgos || '',
             impresion: d.impresion || '',
@@ -180,7 +203,7 @@ const BoxEcografiaPage: React.FC = () => {
         }
       })
       .catch(() => setPlantillaActual(null));
-  }, [form.tipo, prestacionRaw]);
+  }, [form.tipo, prestacionRaw, prestacionIdActual, plantillasKeys, plantillaPorPrest]);
 
   const aplicarPlantillaHallazgos = plantillaActual?.hallazgos
     ? () => handleChange('hallazgos', plantillaActual!.hallazgos)
@@ -259,6 +282,7 @@ const BoxEcografiaPage: React.FC = () => {
 
     const sexoCita = cita.pacienteSexo || '';
     setPrestacionRaw(tipoBase);
+    setPrestacionIdActual((cita.prestaciones || []).map(p => (p as any).prestacionId).find(Boolean) || undefined);
 
     setCitaActiva(cita);
     setInformeId(cita.informeId || null);
@@ -501,6 +525,7 @@ const BoxEcografiaPage: React.FC = () => {
           citasDia={citasDia}
           onSeleccionar={handleNuevoInformeParaCita}
           plantillasKeys={plantillasKeys}
+          plantillaPorPrest={plantillaPorPrest}
         />
       )}
     </div>
@@ -534,9 +559,10 @@ interface CitasListProps {
   citasDia: Cita[];
   onSeleccionar: (cita: Cita) => void;
   plantillasKeys: Set<string>;
+  plantillaPorPrest: Map<string, string>;
 }
 
-const CitasList: React.FC<CitasListProps> = ({ citasDia, onSeleccionar, plantillasKeys }) => {
+const CitasList: React.FC<CitasListProps> = ({ citasDia, onSeleccionar, plantillasKeys, plantillaPorPrest }) => {
   // Agrupar por día (YYYY-MM-DD)
   const porDia = citasDia.reduce<Record<string, Cita[]>>((acc, c) => {
     const key = c.fecha.toDate().toISOString().split('T')[0];
@@ -601,10 +627,8 @@ const CitasList: React.FC<CitasListProps> = ({ citasDia, onSeleccionar, plantill
                 const puedeRedactar = ['En atención', 'Rezagado', 'Finalizado', 'Confirmado', 'En espera'].includes(cita.estado);
                 const tieneInforme = !!cita.informeId;
 
-                const { tipo: tipoParsed } = parsearTipoAtencion(tipoBase);
-                const rawSinCodigo = tipoBase.includes(' - ') ? tipoBase.split(' - ').slice(1).join(' - ').trim() : tipoBase;
-                const keysToCheck = [tipoBase, rawSinCodigo, tipoParsed].filter(Boolean).map(makeKeyPlantilla);
-                const tienePlantilla = keysToCheck.some(k => plantillasKeys.has(k));
+                const pidCita = (cita.prestaciones || []).map(p => (p as any).prestacionId).find(Boolean) as string | undefined;
+                const tienePlantilla = !!buscarPlantillaKey(tipoBase, pidCita, plantillasKeys, plantillaPorPrest);
 
                 return (
                   <div key={cita.id} className={`flex items-center gap-4 px-4 py-3.5 group ${tieneInforme ? 'bg-emerald-50/30' : ''}`}>

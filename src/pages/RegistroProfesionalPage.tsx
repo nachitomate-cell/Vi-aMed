@@ -70,7 +70,7 @@ export default function RegistroProfesionalPage() {
       const credential = await createUserWithEmailAndPassword(authVinamed, form.email, form.password);
       const uid = credential.user.uid;
 
-      await setDoc(doc(dbVinamed, 'profesionales', uid), {
+      await setDoc(doc(dbVinamed, 'usuarios', uid), {
         rut: form.rut,
         nombre: form.nombre,
         email: form.email,

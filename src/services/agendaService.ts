@@ -45,7 +45,7 @@ export async function actualizarCita(
 
 export async function getProfesionales(): Promise<Profesional[]> {
   const snap = await getDocs(
-    query(collection(db, 'profesionales'), where('activo', '==', true))
+    query(collection(db, 'usuarios'), where('activo', '==', true))
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as Profesional));
 }

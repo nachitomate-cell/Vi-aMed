@@ -4,6 +4,8 @@ import {
   collection, query, where, getDocs, doc, getDoc, orderBy, updateDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
+import AvisoLegalDatos from '../components/dashboard/AvisoLegalDatos';
 
 interface Paciente {
   id: string;
@@ -45,6 +47,7 @@ const ESTADO_COLORS: Record<string, { bg: string; text: string }> = {
 const PacienteDetallePage: React.FC = () => {
   const { pacienteId } = useParams<{ pacienteId: string }>();
   const navigate = useNavigate();
+  const dialog = useDialog();
 
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [citas, setCitas] = useState<CitaPaciente[]>([]);
@@ -164,10 +167,10 @@ const PacienteDetallePage: React.FC = () => {
       
       setPaciente({ ...paciente, ...updateData });
       setEditando(false);
-      alert('Datos del paciente actualizados correctamente.');
+      await dialog.alert('Datos del paciente actualizados correctamente.');
     } catch (err) {
       console.error('Error actualizando paciente:', err);
-      alert('Error al guardar los cambios.');
+      await dialog.alert('Error al guardar los cambios.');
     } finally {
       setGuardando(false);
     }
@@ -224,6 +227,8 @@ const PacienteDetallePage: React.FC = () => {
         </svg>
         Volver a Pacientes
       </button>
+
+      <AvisoLegalDatos />
 
       {/* Header del paciente */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex items-start gap-5">

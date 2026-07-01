@@ -8,19 +8,19 @@ import type { Profesional, Cita } from '../types/agenda';
 
 export async function getProfesionales(): Promise<Profesional[]> {
   const snap = await getDocs(
-    query(collection(db, 'profesionales'), orderBy('nombre', 'asc'))
+    query(collection(db, 'usuarios'), orderBy('nombre', 'asc'))
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as Profesional));
 }
 
 export async function getProfesional(id: string): Promise<Profesional | null> {
-  const snap = await getDoc(doc(db, 'profesionales', id));
+  const snap = await getDoc(doc(db, 'usuarios', id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as Profesional;
 }
 
 export async function getProfesionalByRut(rut: string): Promise<Profesional | null> {
-  const q = query(collection(db, 'profesionales'), where('rut', '==', rut));
+  const q = query(collection(db, 'usuarios'), where('rut', '==', rut));
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
@@ -40,14 +40,14 @@ export async function actualizarProfesional(
   id: string,
   datos: Partial<Omit<Profesional, 'id'>>
 ): Promise<void> {
-  await updateDoc(doc(db, 'profesionales', id), {
+  await updateDoc(doc(db, 'usuarios', id), {
     ...datos,
     actualizadoEn: serverTimestamp(),
   });
 }
 
 export async function toggleActivoProfesional(id: string, activo: boolean): Promise<void> {
-  await updateDoc(doc(db, 'profesionales', id), {
+  await updateDoc(doc(db, 'usuarios', id), {
     activo,
     actualizadoEn: serverTimestamp(),
   });

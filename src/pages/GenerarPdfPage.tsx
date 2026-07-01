@@ -1,19 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Timestamp } from 'firebase/firestore';
-import { getApp } from 'firebase/app';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { useAuth } from '../auth/AuthContext';
-import {
-  subirPdfStorage,
-  crearRegistroPdf,
-  actualizarRegistroPdf,
-  eliminarRegistroPdf,
-  escucharPdfsGenerados,
-  calcularDiasRestantes,
-  fechaLegible,
-} from '../services/generarPdfService';
 import { inicializarCornerstone, cornerstone } from '../lib/cornerstone';
-import type { GeneradorPdfDoc } from '../types/generarPdf';
 
 // ── Tipos locales ─────────────────────────────────────────────
 
@@ -23,24 +9,41 @@ interface ArchivoItem {
   tipo: 'imagen' | 'dicom';
 }
 
+/** Entrada de historial SIMBÓLICO (solo en memoria, esta sesión). */
+interface HistorialLocal {
+  id: string;
+  pacienteNombre: string;
+  totalImagenes: number;
+  creadoEn: Date;
+  blobUrl: string;   // se conserva para re-descargar durante la sesión
+  fileName: string;
+}
+
+function fechaCorta(d: Date): string {
+  return d.toLocaleDateString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+/** Dispara la descarga de un blob/URL en el navegador. */
+function descargar(url: string, fileName: string): void {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 // ── Helpers de procesamiento ──────────────────────────────────
 
-async function imagenADataURL(file: File, maxW = 1200, quality = 0.65): Promise<string> {
+// Embebe la imagen ORIGINAL (JPG/PNG) tal cual en el PDF. No se re-codifica
+// por canvas para evitar que ciertos JPEG/PNG (perfiles de color, etc.) salgan
+// en negro. pdfmake soporta data URLs JPEG y PNG de forma nativa.
+async function imagenADataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxW / img.width);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = e.target!.result as string;
-    };
+    reader.onload = e => resolve(e.target!.result as string);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -92,44 +95,38 @@ async function generarPdfBlob(
   const pdfFonts = (pdfFontsModule as any).default ?? pdfFontsModule;
   pdfMake.vfs = pdfFonts?.pdfMake?.vfs ?? pdfFonts?.vfs ?? {};
 
-  const docDefinition: any = {
-    pageSize: 'A4',
-    pageMargins: [30, 70, 30, 50],
-    header: (_page: number) => ({
-      columns: [
-        { text: 'ViñaMed — Imágenes Ecográficas', style: 'hdr', alignment: 'left' },
-        { text: `${pacienteNombre} · ${fecha}`, style: 'hdr', alignment: 'right' },
-      ],
-      margin: [30, 20],
-    }),
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  ·  Documento confidencial — ViñaMed`,
-      alignment: 'center',
-      style: 'ftr',
-      margin: [30, 10],
-    }),
-    content: imagenes.map((dataUrl, i) => ({
+  // Plantilla réplica del Word de ecografía: página vertical ~25×35 cm
+  // (709×1001 pt, igual al export real), FONDO NEGRO y ~2 imágenes por hoja.
+  // Las capturas del ecógrafo ya vienen con fondo negro, por lo que calzan.
+  const PAGE_W = 709;
+  const PAGE_H = 1001;
+  const MARGIN = 28;
+  const IMG_W = 600; // centrada; deja ~2 por página según proporción
+
+  // Agrupa las imágenes de a 2 por página.
+  const contenido: any[] = [];
+  for (let i = 0; i < imagenes.length; i += 2) {
+    const grupo = imagenes.slice(i, i + 2).map((dataUrl, j) => ({
       image: dataUrl,
-      width: 535,
+      width: IMG_W,
       alignment: 'center',
-      margin: [0, i === 0 ? 0 : 20, 0, 20],
-      pageBreak: i > 0 ? 'before' : undefined,
-    })),
-    styles: {
-      hdr: { fontSize: 9, color: '#64748B' },
-      ftr: { fontSize: 8, color: '#94A3B8' },
-    },
+      margin: [0, j === 0 ? 0 : 24, 0, 0],
+    }));
+    contenido.push({ stack: grupo, pageBreak: i > 0 ? 'before' : undefined });
+  }
+
+  const docDefinition: any = {
+    pageSize: { width: PAGE_W, height: PAGE_H },
+    pageMargins: [MARGIN, MARGIN, MARGIN, MARGIN],
+    // Fondo negro que cubre toda la hoja (como la plantilla).
+    background: (_currentPage: number, pageSize: { width: number; height: number }) => ({
+      canvas: [{ type: 'rect', x: 0, y: 0, w: pageSize.width, h: pageSize.height, color: '#000000' }],
+    }),
+    info: { title: `ECO ${pacienteNombre} ${fecha}`.trim() },
+    content: contenido,
   };
 
   return new Promise(resolve => pdfMake.createPdf(docDefinition).getBlob(resolve));
-}
-
-// ── Colores de días restantes ─────────────────────────────────
-
-function colorDias(dias: number): { bg: string; text: string } {
-  if (dias <= 5)  return { bg: '#FEF2F2', text: '#EF4444' };
-  if (dias <= 12) return { bg: '#FFFBEB', text: '#D97706' };
-  return { bg: '#F0FDF4', text: '#16A34A' };
 }
 
 // ── Constantes de estilo ──────────────────────────────────────
@@ -167,26 +164,23 @@ const labelStyle: React.CSSProperties = {
 // ── Componente principal ──────────────────────────────────────
 
 const GenerarPdfPage: React.FC = () => {
-  const { user } = useAuth();
-
   const [nombre, setNombre]   = useState('');
-  const [email, setEmail]     = useState('');
   const [archivos, setArchivos] = useState<ArchivoItem[]>([]);
   const [dragging, setDragging] = useState(false);
 
   const [progreso, setProgreso] = useState<{ activo: boolean; paso: string; pct: number }>({
     activo: false, paso: '', pct: 0,
   });
-  const [historial, setHistorial] = useState<GeneradorPdfDoc[]>([]);
-  const [enviando, setEnviando]   = useState<string | null>(null);
+  const [historial, setHistorial] = useState<HistorialLocal[]>([]);
   const [error, setError]         = useState('');
   const [exito, setExito]         = useState('');
 
   const dropRef = useRef<HTMLDivElement>(null);
 
+  // Liberar las URLs de objeto del historial al desmontar.
   useEffect(() => {
-    const unsub = escucharPdfsGenerados(setHistorial);
-    return unsub;
+    return () => historial.forEach(h => URL.revokeObjectURL(h.blobUrl));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Limpiar previews al desmontar
@@ -235,25 +229,10 @@ const GenerarPdfPage: React.FC = () => {
     if (!nombre.trim() || archivos.length === 0) return;
     setError('');
     setExito('');
-    setProgreso({ activo: true, paso: 'Creando registro…', pct: 5 });
+    setProgreso({ activo: true, paso: 'Procesando imágenes…', pct: 5 });
 
     try {
       const now = new Date();
-      const expira = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const docId = await crearRegistroPdf({
-        pacienteNombre:  nombre.trim(),
-        pacienteEmail:   email.trim(),
-        totalImagenes:   archivos.length,
-        pdfStoragePath:  '',
-        pdfUrl:          '',
-        estado:          'generando',
-        emailEnviado:    false,
-        emailEnviadoEn:  null,
-        emailEnviadoPor: null,
-        creadoEn:        Timestamp.fromDate(now),
-        expiraEn:        Timestamp.fromDate(expira),
-        creadoPor:       user?.name ?? 'desconocido',
-      });
 
       // Procesar imágenes
       const dataUrls: string[] = [];
@@ -262,7 +241,7 @@ const GenerarPdfPage: React.FC = () => {
         setProgreso({
           activo: true,
           paso: `Procesando imagen ${i + 1} de ${archivos.length}…`,
-          pct: 10 + Math.round((i / archivos.length) * 55),
+          pct: 5 + Math.round((i / archivos.length) * 70),
         });
         try {
           const dataUrl = item.tipo === 'dicom'
@@ -278,69 +257,39 @@ const GenerarPdfPage: React.FC = () => {
         throw new Error('No se pudo procesar ninguna imagen.');
       }
 
-      setProgreso({ activo: true, paso: 'Generando PDF…', pct: 68 });
+      setProgreso({ activo: true, paso: 'Generando PDF…', pct: 85 });
       const fechaStr = now.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
       const blob = await generarPdfBlob(dataUrls, nombre.trim(), fechaStr);
 
-      setProgreso({ activo: true, paso: 'Subiendo PDF…', pct: 85 });
-      const { path, url } = await subirPdfStorage(blob, docId);
+      // Nombre de archivo y DESCARGA AUTOMÁTICA (sin Storage).
+      const slug = nombre.trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+      const fileName = `ECO_${slug}_${fechaStr.replace(/\//g, '-')}.pdf`;
+      const blobUrl = URL.createObjectURL(blob);
+      descargar(blobUrl, fileName);
 
-      await actualizarRegistroPdf(docId, {
-        pdfStoragePath: path,
-        pdfUrl: url,
-        estado: 'listo',
-        totalImagenes: dataUrls.length,
-      });
+      // Historial SIMBÓLICO (en memoria, permite re-descargar esta sesión).
+      setHistorial(prev => [
+        { id: `h_${now.getTime()}`, pacienteNombre: nombre.trim(), totalImagenes: dataUrls.length, creadoEn: now, blobUrl, fileName },
+        ...prev,
+      ]);
 
       setProgreso({ activo: false, paso: '', pct: 100 });
       setNombre('');
-      setEmail('');
       setArchivos([]);
-      setExito('PDF generado y guardado correctamente.');
+      setExito('PDF generado y descargado.');
     } catch (e: any) {
       setError(e.message ?? 'Error al generar el PDF.');
       setProgreso({ activo: false, paso: '', pct: 0 });
     }
   };
 
-  // ── Enviar email ────────────────────────────────────────────
+  // ── Historial simbólico ─────────────────────────────────────
 
-  const handleEnviarEmail = async (doc: GeneradorPdfDoc) => {
-    if (!doc.pacienteEmail) {
-      setError('Este registro no tiene un correo de paciente registrado.');
-      return;
-    }
-    setEnviando(doc.id);
-    setError('');
-    try {
-      const app = getApp('vinamed');
-      const fns = getFunctions(app);
-      const fn = httpsCallable(fns, 'enviarPdfEcografia');
-      await fn({
-        docId:           doc.id,
-        pacienteNombre:  doc.pacienteNombre,
-        pacienteEmail:   doc.pacienteEmail,
-        pdfUrl:          doc.pdfUrl,
-      });
-      setExito(`Correo enviado a ${doc.pacienteEmail}`);
-    } catch (e: any) {
-      setError('No se pudo enviar el correo. Verifica que la función esté desplegada.');
-    } finally {
-      setEnviando(null);
-    }
-  };
+  const reDescargar = (item: HistorialLocal) => descargar(item.blobUrl, item.fileName);
 
-  const toggleEmailEnviado = async (doc: GeneradorPdfDoc) => {
-    await actualizarRegistroPdf(doc.id, {
-      emailEnviado:    !doc.emailEnviado,
-      emailEnviadoEn:  !doc.emailEnviado ? Timestamp.now() : null,
-      emailEnviadoPor: !doc.emailEnviado ? (user?.name ?? 'manual') : null,
-    });
-  };
-
-  const handleEliminar = async (doc: GeneradorPdfDoc) => {
-    if (!confirm(`¿Eliminar el PDF de ${doc.pacienteNombre}? Esta acción no se puede deshacer.`)) return;
-    await eliminarRegistroPdf(doc.id, doc.pdfStoragePath);
+  const handleEliminar = (item: HistorialLocal) => {
+    URL.revokeObjectURL(item.blobUrl);
+    setHistorial(prev => prev.filter(h => h.id !== item.id));
   };
 
   // ── Render ──────────────────────────────────────────────────
@@ -356,7 +305,7 @@ const GenerarPdfPage: React.FC = () => {
           Generar PDF de Imágenes
         </h1>
         <p style={{ fontSize: 13, color: '#64748B', margin: '4px 0 0' }}>
-          Sube imágenes JPG o DICOM para convertirlas en un PDF liviano y enviárselo al paciente.
+          Sube imágenes JPG o DICOM y genera el PDF (fondo negro, 2 por hoja). Se descarga automáticamente.
         </p>
       </div>
 
@@ -379,28 +328,15 @@ const GenerarPdfPage: React.FC = () => {
         </h2>
 
         {/* Datos del paciente */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-          <div>
-            <label style={labelStyle}>Nombre del Paciente *</label>
-            <input
-              style={inputStyle}
-              placeholder="Ej: Juan Pérez González"
-              value={nombre}
-              onChange={e => setNombre(e.target.value)}
-              disabled={progreso.activo}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Correo del Paciente</label>
-            <input
-              type="email"
-              style={inputStyle}
-              placeholder="paciente@correo.cl"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={progreso.activo}
-            />
-          </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={labelStyle}>Nombre del Paciente *</label>
+          <input
+            style={inputStyle}
+            placeholder="Ej: Juan Pérez González"
+            value={nombre}
+            onChange={e => setNombre(e.target.value)}
+            disabled={progreso.activo}
+          />
         </div>
 
         {/* Zona de carga */}
@@ -557,9 +493,9 @@ const GenerarPdfPage: React.FC = () => {
         </button>
       </div>
 
-      {/* ── Historial ────────────────────────────────────────── */}
+      {/* ── Historial (simbólico, solo esta sesión) ──────────── */}
       <div style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', margin: 0 }}>
             Historial de PDFs
           </h2>
@@ -580,14 +516,14 @@ const GenerarPdfPage: React.FC = () => {
 
         {historial.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>
-            No hay PDFs generados aún.
+            No hay PDFs generados en esta sesión.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #F1F5F9' }}>
-                  {['Paciente', 'Correo', 'Imgs', 'Creado', 'Expira en', 'Email', 'Acciones'].map(h => (
+                  {['Paciente', 'Imágenes', 'Generado', 'Acciones'].map(h => (
                     <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                       {h}
                     </th>
@@ -595,175 +531,58 @@ const GenerarPdfPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {historial.map(item => {
-                  const dias = item.expiraEn ? calcularDiasRestantes(item.expiraEn) : 0;
-                  const { bg, text: clr } = colorDias(dias);
-                  return (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
-
-                      {/* Paciente */}
-                      <td style={{ padding: '12px 12px' }}>
-                        <span style={{ fontWeight: 600, color: '#0F172A' }}>
-                          {item.pacienteNombre}
-                        </span>
-                        {item.estado === 'generando' && (
-                          <span style={{ marginLeft: 6, fontSize: 10, color: '#D97706', background: '#FFFBEB', padding: '1px 6px', borderRadius: 99 }}>
-                            generando…
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Correo */}
-                      <td style={{ padding: '12px 12px', color: '#475569' }}>
-                        {item.pacienteEmail || <span style={{ color: '#CBD5E1' }}>—</span>}
-                      </td>
-
-                      {/* Imágenes */}
-                      <td style={{ padding: '12px 12px', color: '#475569', textAlign: 'center' }}>
-                        {item.totalImagenes}
-                      </td>
-
-                      {/* Fecha creación */}
-                      <td style={{ padding: '12px 12px', color: '#475569', whiteSpace: 'nowrap' }}>
-                        {item.creadoEn ? fechaLegible(item.creadoEn) : '—'}
-                      </td>
-
-                      {/* Días restantes */}
-                      <td style={{ padding: '12px 12px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '3px 10px',
-                          borderRadius: 99,
-                          background: bg,
-                          color: clr,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {dias === 0 ? 'Expirado' : `${dias} días`}
-                        </span>
-                      </td>
-
-                      {/* Email enviado */}
-                      <td style={{ padding: '12px 12px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
-                            <input
-                              type="checkbox"
-                              checked={item.emailEnviado}
-                              onChange={() => toggleEmailEnviado(item)}
-                              style={{ accentColor: '#0E7490', width: 14, height: 14 }}
-                            />
-                            <span style={{ fontSize: 11, color: item.emailEnviado ? '#16A34A' : '#94A3B8', fontWeight: 500 }}>
-                              {item.emailEnviado ? 'Enviado' : 'No enviado'}
-                            </span>
-                          </label>
-                          {item.emailEnviado && item.emailEnviadoEn && (
-                            <span style={{ fontSize: 10, color: '#94A3B8' }}>
-                              {item.emailEnviadoEn.toDate().toLocaleDateString('es-CL')}
-                              {item.emailEnviadoPor ? ` · ${item.emailEnviadoPor}` : ''}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Acciones */}
-                      <td style={{ padding: '12px 12px' }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
-                          {/* Descargar */}
-                          {item.pdfUrl && item.estado === 'listo' && (
-                            <a
-                              href={item.pdfUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Descargar PDF"
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: 8,
-                                border: '1px solid #E2E8F0',
-                                background: '#F8FAFC',
-                                color: '#0E7490',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                textDecoration: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                              </svg>
-                              PDF
-                            </a>
-                          )}
-
-                          {/* Enviar correo */}
-                          {item.pacienteEmail && item.estado === 'listo' && (
-                            <button
-                              onClick={() => handleEnviarEmail(item)}
-                              disabled={enviando === item.id}
-                              title="Enviar por correo"
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: 8,
-                                border: '1px solid #E0F2FE',
-                                background: '#F0F9FF',
-                                color: '#0369A1',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: enviando === item.id ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                whiteSpace: 'nowrap',
-                                opacity: enviando === item.id ? 0.6 : 1,
-                              }}
-                            >
-                              <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                              </svg>
-                              {enviando === item.id ? '…' : 'Enviar'}
-                            </button>
-                          )}
-
-                          {/* Eliminar */}
-                          <button
-                            onClick={() => handleEliminar(item)}
-                            title="Eliminar"
-                            style={{
-                              padding: '6px 10px',
-                              borderRadius: 8,
-                              border: '1px solid #FFE4E6',
-                              background: '#FFF1F2',
-                              color: '#E11D48',
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                          >
-                            <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {historial.map(item => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                    <td style={{ padding: '12px 12px', fontWeight: 600, color: '#0F172A' }}>
+                      {item.pacienteNombre}
+                    </td>
+                    <td style={{ padding: '12px 12px', color: '#475569', textAlign: 'center' }}>
+                      {item.totalImagenes}
+                    </td>
+                    <td style={{ padding: '12px 12px', color: '#475569', whiteSpace: 'nowrap' }}>
+                      {fechaCorta(item.creadoEn)}
+                    </td>
+                    <td style={{ padding: '12px 12px' }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap' }}>
+                        <button
+                          onClick={() => reDescargar(item)}
+                          title="Descargar de nuevo"
+                          style={{
+                            padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0',
+                            background: '#F8FAFC', color: '#0E7490', fontSize: 12, fontWeight: 600,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                          </svg>
+                          Descargar
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(item)}
+                          title="Quitar del historial"
+                          style={{
+                            padding: '6px 10px', borderRadius: 8, border: '1px solid #FFE4E6',
+                            background: '#FFF1F2', color: '#E11D48', fontSize: 12,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                          }}
+                        >
+                          <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
 
-        {historial.some(h => calcularDiasRestantes(h.expiraEn) <= 5 && calcularDiasRestantes(h.expiraEn) > 0) && (
-          <p style={{ fontSize: 11, color: '#D97706', marginTop: 12, margin: '16px 0 0', padding: '8px 12px', background: '#FFFBEB', borderRadius: 8, borderLeft: '3px solid #F59E0B' }}>
-            Algunos PDFs expiran en menos de 5 días. Se eliminan automáticamente a los 30 días.
-          </p>
-        )}
+        <p style={{ fontSize: 11, color: '#94A3B8', margin: '14px 0 0' }}>
+          El historial es simbólico: existe solo durante esta sesión y no se guarda en la nube.
+        </p>
       </div>
 
       <style>{`

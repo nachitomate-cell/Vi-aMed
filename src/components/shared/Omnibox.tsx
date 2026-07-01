@@ -11,6 +11,7 @@ export const Omnibox: React.FC = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -20,6 +21,13 @@ export const Omnibox: React.FC = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Permite enfocar la búsqueda con un atajo de teclado (Ctrl/⌘+K o /).
+  useEffect(() => {
+    const focus = () => { inputRef.current?.focus(); inputRef.current?.select(); };
+    window.addEventListener('vinamed:focus-search', focus);
+    return () => window.removeEventListener('vinamed:focus-search', focus);
   }, []);
 
   useEffect(() => {
@@ -76,6 +84,7 @@ export const Omnibox: React.FC = () => {
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
+          ref={inputRef}
           type="text"
           value={q}
           onChange={e => {

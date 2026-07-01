@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useDialog } from '../components/ui/DialogProvider';
 
 interface TempLog {
   id: string;
@@ -15,6 +16,7 @@ interface TempLog {
 }
 
 const InventarioPage: React.FC = () => {
+  const dialog = useDialog();
   const [activeTab, setActiveTab] = useState<'inventario' | 'temperatura'>('temperatura');
   const [logs, setLogs] = useState<TempLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,10 +53,10 @@ const InventarioPage: React.FC = () => {
       });
       setForm({ min: '', max: '', avg: '', responsable: '' });
       fetchLogs();
-      alert('Registro guardado');
+      await dialog.alert('Registro guardado');
     } catch (e) {
       console.error(e);
-      alert('Error al guardar');
+      await dialog.alert('Error al guardar');
     }
   };
 

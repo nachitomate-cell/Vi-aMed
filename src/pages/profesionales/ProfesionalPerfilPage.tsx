@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storageVinamed } from '../../lib/firebase';
+import { useDialog } from '../../components/ui/DialogProvider';
 import type { Profesional } from '../../types/agenda';
 import { getProfesional, actualizarProfesional } from '../../services/profesionalesService';
 import { useProfesionalKPIs } from '../../hooks/useProfesionalKPIs';
@@ -80,6 +81,7 @@ function toDateInput(d: Date): string {
 const ProfesionalPerfilPage: React.FC = () => {
   const { profesionalId } = useParams<{ profesionalId: string }>();
   const navigate = useNavigate();
+  const dialog = useDialog();
 
   const [profesional, setProfesional] = useState<Profesional | null>(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
@@ -139,7 +141,7 @@ const ProfesionalPerfilPage: React.FC = () => {
       setProfesional({ ...profesional, fotoUrl: url });
     } catch (err) {
       console.error('Error al subir foto:', err);
-      alert('Hubo un error al subir la foto de perfil.');
+      await dialog.alert('Hubo un error al subir la foto de perfil.');
     } finally {
       setSubiendoFoto(false);
     }

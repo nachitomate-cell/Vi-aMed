@@ -4,6 +4,7 @@ import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useGestionDatos } from '../hooks/useGestionDatos';
 import { formatearRutInput } from '../utils/rut';
+import AvisoLegalDatos from '../components/dashboard/AvisoLegalDatos';
 
 interface PacienteForm {
   tipoDocumento: 'rut' | 'pasaporte';
@@ -59,6 +60,48 @@ const NuevoPacientePage: React.FC = () => {
   const set = (k: keyof PacienteForm, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const isExtranjero = form.tipoDocumento === 'pasaporte';
+
+  // ── Rellenar con datos de prueba (para demostraciones) ──
+  const rellenarDatosPrueba = () => {
+    const nombresDemo = ['Juan José', 'María Fernanda', 'Pedro Antonio', 'Camila Andrea', 'Diego Alonso', 'Valentina Paz'];
+    const paternosDemo = ['Pérez', 'González', 'Muñoz', 'Rojas', 'Díaz', 'Contreras'];
+    const maternosDemo = ['Soto', 'Fuentes', 'Reyes', 'Castro', 'Vargas', 'Morales'];
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    // RUT aleatorio con dígito verificador válido (módulo 11)
+    const cuerpo = 10000000 + Math.floor(Math.random() * 9999999);
+    let suma = 0, mul = 2;
+    for (const c of String(cuerpo).split('').reverse()) {
+      suma += Number(c) * mul;
+      mul = mul === 7 ? 2 : mul + 1;
+    }
+    const resto = 11 - (suma % 11);
+    const dv = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+
+    const nombres = pick(nombresDemo);
+    const apellidoPaterno = pick(paternosDemo);
+    const apellidoMaterno = pick(maternosDemo);
+    const año = 1960 + Math.floor(Math.random() * 50);
+    const mes = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+    const dia = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+
+    setForm({
+      tipoDocumento: 'rut',
+      rut: formatearRutInput(`${cuerpo}${dv}`),
+      pasaporte: '',
+      pais: '',
+      nombres,
+      apellidoPaterno,
+      apellidoMaterno,
+      fechaNacimiento: `${año}-${mes}-${dia}`,
+      telefono: `+569 ${1000 + Math.floor(Math.random() * 8999)} ${1000 + Math.floor(Math.random() * 8999)}`,
+      correo: `${nombres.split(' ')[0].toLowerCase()}.${apellidoPaterno.toLowerCase()}@ejemplo.cl`,
+      sexo: opciones.sexos[0] || 'Masculino',
+      prevision: opciones.previsiones[0] || 'Fonasa',
+      direccion: 'Av. Siempreviva 123, Viña del Mar',
+    });
+    setShowError(false);
+  };
 
   const handleSave = async () => {
     if (isExtranjero) {
@@ -116,10 +159,26 @@ const NuevoPacientePage: React.FC = () => {
 
   return (
     <div className="p-5 max-w-2xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">Registrar Paciente</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Ingresa un nuevo paciente en el sistema</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Registrar Paciente</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Ingresa un nuevo paciente en el sistema</p>
+        </div>
+        {!saved && (
+          <button
+            onClick={rellenarDatosPrueba}
+            title="Rellena todos los campos con un paciente ficticio para demostraciones"
+            className="flex items-center gap-2 px-4 py-2 border border-dashed border-[#0E7490]/40 text-[#0E7490] rounded-xl hover:bg-[#0E7490]/5 transition-colors text-sm font-semibold shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Datos de prueba
+          </button>
+        )}
       </div>
+
+      <AvisoLegalDatos />
 
       {saved ? (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center">

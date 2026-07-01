@@ -2,6 +2,9 @@ import React, { useMemo } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Omnibox } from '../components/shared/Omnibox';
+import { useDialog } from '../components/ui/DialogProvider';
+import { ShortcutsHelp, NAV_SHORTCUTS } from '../components/ui/ShortcutsHelp';
+import { puedeVer } from '../auth/permissions';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -33,10 +36,10 @@ const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
 const activeIndicatorClasses = "absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.5)]";
 
 const badgeClasses =
-  'ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#67E8F9]/10 text-[#67E8F9] border border-[#67E8F9]/20 group-hover:bg-[#67E8F9]/20 transition-colors';
+  'navbadge ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#67E8F9]/10 text-[#67E8F9] border border-[#67E8F9]/20 group-hover:bg-[#67E8F9]/20 transition-colors';
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em] px-4 mb-3 mt-6">
+  <p className="seclabel text-[10px] font-bold text-white/30 uppercase tracking-[0.15em] px-4 mb-3 mt-6">
     {children}
   </p>
 );
@@ -45,9 +48,16 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const DesktopLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const dialog = useDialog();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [supportOpen, setSupportOpen] = React.useState(false);
+  const [showShortcuts, setShowShortcuts] = React.useState(false);
+  const [colapsado, setColapsado] = React.useState(() => localStorage.getItem('vinamed-sidebar-collapsed') === 'true');
+
+  React.useEffect(() => {
+    localStorage.setItem('vinamed-sidebar-collapsed', colapsado ? 'true' : 'false');
+  }, [colapsado]);
   const saludo = useMemo(getSaludo, []);
   const nombreCorto = user?.name?.split(' ')[0] ?? 'Usuario';
   const iniciales = getIniciales(user?.name ?? 'U');
@@ -63,26 +73,74 @@ const DesktopLayout: React.FC = () => {
       localStorage.setItem('vinamed-dark-mode', 'false');
     }
   }, [darkMode]);
-  
-  // RBAC Flags
-  const role = user?.role?.toUpperCase() || '';
-  const isAdmin = role === 'ADMIN';
-  const isSecretaria = role === 'SECRETARIA' || role === 'RECEPCION';
-  const isMedico = role === 'MEDICO_RADIOLOGO' || role === 'MEDICO';
-  const isTecnologo = role === 'TECNOLOGO_MEDICO' || role === 'TECNOLOGO';
-  const isEnfermero = role === 'ENFERMERO' || role === 'ENFERMERIA';
 
-  const canSeeAgenda = isAdmin || isSecretaria || isMedico || isTecnologo || isEnfermero;
-  const canSeeRecepcion = isAdmin || isSecretaria || isEnfermero;
-  const canSeeBoxMedicina = isAdmin || isMedico || isEnfermero;
-  const canSeeBoxEco = isAdmin || isMedico || isTecnologo || isEnfermero;
-  const canSeeBoxEnf = isAdmin || isEnfermero;
-  const canSeeSetm = isAdmin || isEnfermero || isTecnologo || isSecretaria;
-  const canSeeValidar = isAdmin || isMedico || isSecretaria || isEnfermero;
-  const canSeeProtocolos = isAdmin || isMedico || isEnfermero;
-  const canSeePacientes = isAdmin || isSecretaria || isMedico || isTecnologo || isEnfermero;
-  const canSeeAdmin = isAdmin || isEnfermero;
-  const canSeeGenerarPdf = isAdmin || isSecretaria || isTecnologo || isEnfermero;
+  // ── Atajos de teclado globales ──────────────────────────────────────────────
+  React.useEffect(() => {
+    let gPending = false;
+    let gTimer: ReturnType<typeof setTimeout> | undefined;
+    const isTyping = () => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    };
+    const focusSearch = () => window.dispatchEvent(new CustomEvent('vinamed:focus-search'));
+
+    const onKey = (e: KeyboardEvent) => {
+      // Ctrl/⌘ + K funciona siempre (incluso escribiendo).
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault(); focusSearch(); return;
+      }
+      if (isTyping()) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // Secuencia de navegación: g + tecla.
+      if (gPending) {
+        gPending = false;
+        if (gTimer) clearTimeout(gTimer);
+        const sc = NAV_SHORTCUTS.find(s => s.key === e.key.toLowerCase());
+        if (sc) { e.preventDefault(); navigate(sc.path); }
+        return;
+      }
+
+      if (e.key === '?') { e.preventDefault(); setShowShortcuts(s => !s); return; }
+      if (e.key === '/') { e.preventDefault(); focusSearch(); return; }
+      if (e.key === 'Escape') { setShowShortcuts(false); return; }
+      if (e.shiftKey && e.key.toLowerCase() === 'd') { e.preventDefault(); setDarkMode(v => !v); return; }
+      if (e.shiftKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        dialog.confirm('¿Cerrar sesión?', { title: 'Cerrar sesión', confirmText: 'Cerrar sesión', danger: true })
+          .then(ok => { if (ok) logout(); });
+        return;
+      }
+      if (e.key.toLowerCase() === 'g') {
+        gPending = true;
+        if (gTimer) clearTimeout(gTimer);
+        gTimer = setTimeout(() => { gPending = false; }, 1200);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); if (gTimer) clearTimeout(gTimer); };
+  }, [navigate, logout, dialog]);
+  
+  // RBAC — visibilidad del sidebar desde la matriz central (src/auth/permissions.ts).
+  // Para cambiar qué ve cada rol, edita esa matriz. Los módulos ocultos para todos
+  // (Agenda, Box Enfermería, Validar) se controlan ahí, en MODULOS_OCULTOS.
+  const rol = user?.role;
+  const canSeeAgenda = puedeVer(rol, 'agenda');
+  const canSeeRecepcion = puedeVer(rol, 'recepcion');
+  const canSeeBoxMedicina = puedeVer(rol, 'box-medicina');
+  const canSeeBoxEco = puedeVer(rol, 'box-ecografia');
+  const canSeeBoxEnf = puedeVer(rol, 'box-enfermeria');
+  const canSeeSetm = puedeVer(rol, 'setm');
+  const canSeeValidar = puedeVer(rol, 'validar-informe');
+  const canSeeProtocolos = puedeVer(rol, 'protocolos');
+  const canSeePacientes = puedeVer(rol, 'pacientes');
+  const canSeeAdmin = puedeVer(rol, 'profesionales');
+  const canSeeGenerarPdf = puedeVer(rol, 'generar');
+  const canSeePlanilla = puedeVer(rol, 'planilla');
 
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
 
@@ -97,7 +155,7 @@ const DesktopLayout: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      alert('La aplicación ya está instalada o tu navegador no soporta la instalación directa.');
+      await dialog.alert('La aplicación ya está instalada o tu navegador no soporta la instalación directa.', { title: 'Instalar app' });
       return;
     }
     deferredPrompt.prompt();
@@ -118,9 +176,9 @@ const DesktopLayout: React.FC = () => {
           SIDEBAR
       ═══════════════════════════════════════════════════════════ */}
       <aside
-        className="sidebar-scroll"
+        className={`sidebar-scroll${colapsado ? ' sidebar-collapsed' : ''}`}
         style={{
-          width: 'var(--sidebar-width)',
+          width: colapsado ? 76 : 'var(--sidebar-width)',
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -133,12 +191,29 @@ const DesktopLayout: React.FC = () => {
           overflowY: 'auto',
           overflowX: 'hidden',
           boxShadow: '4px 0 24px rgba(0,0,0,0.2)',
+          transition: 'width 0.2s ease',
         }}
       >
+        {/* Botón colapsar / expandir */}
+        <button
+          onClick={() => setColapsado(v => !v)}
+          title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
+          style={{
+            position: 'absolute', top: 14, right: colapsado ? 22 : 12, zIndex: 5,
+            width: 26, height: 26, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)',
+            background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path strokeLinecap="round" strokeLinejoin="round" d={colapsado ? 'M9 5l7 7-7 7' : 'M15 5l-7 7 7 7'} />
+          </svg>
+        </button>
+
 
         {/* Logo */}
         <Link to="/dashboard" style={{ textDecoration: 'none' }}>
-          <div style={{ padding: '32px 24px 24px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, cursor: 'pointer' }} className="hover:opacity-80 transition-opacity">
+          <div style={{ padding: colapsado ? '32px 0 24px' : '32px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: colapsado ? 'center' : 'flex-start', gap: 14, flexShrink: 0, cursor: 'pointer' }} className="hover:opacity-80 transition-opacity">
             <div className="relative">
               <img
                 src={`/logo2.png?v=${Date.now()}`}
@@ -147,10 +222,12 @@ const DesktopLayout: React.FC = () => {
                 onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
-            <div>
-              <p style={{ color: '#fff', fontWeight: 800, fontSize: 18, margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>ViñaMed</p>
-              <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: 600, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portal Clínico</p>
-            </div>
+            {!colapsado && (
+              <div>
+                <p style={{ color: '#fff', fontWeight: 800, fontSize: 18, margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>ViñaMed</p>
+                <p style={{ color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: 600, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portal Clínico</p>
+              </div>
+            )}
           </div>
         </Link>
 
@@ -198,6 +275,19 @@ const DesktopLayout: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
                       Recepción
+                    </>
+                  )}
+                </NavLink>
+              )}
+              {canSeePlanilla && (
+                <NavLink to="/planilla" className={navLinkClasses}>
+                  {({ isActive }) => (
+                    <>
+                      {isActive && <div className={activeIndicatorClasses} />}
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-6h6v6m-7 4h8a2 2 0 002-2V7l-5-4H6a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Planilla / Caja
                     </>
                   )}
                 </NavLink>
@@ -416,10 +506,12 @@ const DesktopLayout: React.FC = () => {
               style={{ height: 20, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
-            <div>
-              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', margin: 0 }}>Desarrollado por</p>
-              <p style={{ fontSize: 11, color: '#fff', fontWeight: 500, margin: 0 }}>Synaptech Spa</p>
-            </div>
+            {!colapsado && (
+              <div>
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', margin: 0 }}>Desarrollado por</p>
+                <p style={{ fontSize: 11, color: '#fff', fontWeight: 500, margin: 0 }}>Synaptech Spa</p>
+              </div>
+            )}
           </div>
 
           {supportOpen && (
@@ -540,6 +632,25 @@ const DesktopLayout: React.FC = () => {
             }}>
               Modo protegido
             </div>
+
+            {/* Atajos de teclado */}
+            <button
+              aria-label="Atajos de teclado"
+              onClick={() => setShowShortcuts(true)}
+              title="Atajos de teclado (?)"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-secondary)', padding: 4, display: 'flex', alignItems: 'center',
+                borderRadius: 8, transition: 'color 0.15s',
+              }}
+              onMouseOver={e => (e.currentTarget.style.color = 'var(--color-primary)')}
+              onMouseOut={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+            >
+              <svg width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <path strokeLinecap="round" d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M9 13h6" />
+              </svg>
+            </button>
 
             {/* Icono notificaciones */}
             <button
@@ -739,6 +850,15 @@ const DesktopLayout: React.FC = () => {
             .sidebar-scroll:hover::-webkit-scrollbar-thumb {
               background: rgba(103, 232, 249, 0.5);
             }
+            /* ── Modo colapsado: solo íconos ── */
+            .sidebar-collapsed nav { padding-left: 8px; padding-right: 8px; }
+            .sidebar-collapsed nav a { font-size: 0; justify-content: center; gap: 0; padding-left: 0; padding-right: 0; }
+            .sidebar-collapsed nav a svg { flex-shrink: 0; }
+            .sidebar-collapsed .seclabel { display: none; }
+            .sidebar-collapsed .navbadge { display: none; }
+            .sidebar-collapsed nav > div { margin-bottom: 8px !important; }
+            .sidebar-collapsed nav > div > div > div[style*="height: 1px"],
+            .sidebar-collapsed nav > div div[style*="background: rgba(255,255,255,0.05)"] { display: none; }
           `}</style>
         </header>
 
@@ -756,6 +876,8 @@ const DesktopLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      <ShortcutsHelp open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 };

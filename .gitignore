@@ -31,3 +31,6 @@ ui-debug.log
 
 # Scratch
 scratch/
+
+# TypeScript build info
+*.tsbuildinfo

@@ -4,6 +4,7 @@ import {
   collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
 
 /* ── Types ─────────────────────────────────────────────────── */
 interface ValorPrevision {
@@ -309,6 +310,7 @@ const FONASA_DATA = [
 /* ── Page principal ─────────────────────────────────────────── */
 const PrestacionesPage: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const [prestaciones, setPrestaciones] = useState<Prestacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
@@ -364,13 +366,13 @@ const PrestacionesPage: React.FC = () => {
   };
 
   const handleEliminar = async (id: string, nombre: string) => {
-    if (!window.confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    if (!(await dialog.confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`, { title: 'Eliminar prestación', confirmText: 'Eliminar', danger: true }))) return;
     await deleteDoc(doc(db, 'gestion_prestaciones', id));
     setPrestaciones(p => p.filter(x => x.id !== id));
   };
 
   const handleMigrarFonasaNivel2 = async () => {
-    if (!window.confirm('¿Renombrar "Fonasa Nivel 2" → "Fonasa" en todas las prestaciones? Esta acción no se puede deshacer.')) return;
+    if (!(await dialog.confirm('¿Renombrar "Fonasa Nivel 2" → "Fonasa" en todas las prestaciones? Esta acción no se puede deshacer.', { title: 'Migrar previsiones', confirmText: 'Renombrar', danger: true }))) return;
     setLoading(true);
     let count = 0;
     try {
@@ -386,17 +388,17 @@ const PrestacionesPage: React.FC = () => {
         await updateDoc(doc(db, 'gestion_prestaciones', d.id), { valoresPrevision: nuevaVP });
         count++;
       }
-      alert(`Migración completada: ${count} prestaciones actualizadas.`);
+      await dialog.alert(`Migración completada: ${count} prestaciones actualizadas.`);
       fetchPrestaciones();
     } catch (e) {
       console.error(e);
-      alert('Error en la migración');
+      await dialog.alert('Error en la migración');
     }
     setLoading(false);
   };
 
   const handleUpdateFonasa = async () => {
-    if (!window.confirm("¿Seguro que deseas actualizar los precios de Fonasa masivamente?")) return;
+    if (!(await dialog.confirm('¿Seguro que deseas actualizar los precios de Fonasa masivamente?', { title: 'Actualizar precios Fonasa', confirmText: 'Actualizar' }))) return;
     setLoading(true);
 
     const map = new Map();
@@ -431,11 +433,11 @@ const PrestacionesPage: React.FC = () => {
           count++;
         }
       }
-      alert(`¡Se actualizaron ${count} prestaciones con los precios de Fonasa!`);
+      await dialog.alert(`¡Se actualizaron ${count} prestaciones con los precios de Fonasa!`);
       fetchPrestaciones();
     } catch (e) {
       console.error(e);
-      alert('Error actualizando');
+      await dialog.alert('Error actualizando');
     }
     setLoading(false);
   };

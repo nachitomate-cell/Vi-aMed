@@ -54,9 +54,18 @@ export function escucharPdfsGenerados(
     collection(dbVinamed, COLECCION),
     orderBy('creadoEn', 'desc'),
   );
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as GeneradorPdfDoc)));
-  });
+  return onSnapshot(
+    q,
+    snap => {
+      callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as GeneradorPdfDoc)));
+    },
+    err => {
+      // Sin permisos o error de red: degradar a lista vacía en vez de
+      // dejar que el error propague y rompa el cliente de Firestore.
+      console.warn('escucharPdfsGenerados:', err.code ?? err.message);
+      callback([]);
+    },
+  );
 }
 
 export function calcularDiasRestantes(expiraEn: Timestamp): number {

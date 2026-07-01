@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
+import { useDialog } from '../../components/ui/DialogProvider';
 import type { Profesional, Cita } from '../../types/agenda';
 import { getProfesionales } from '../../services/profesionalesService';
 import { TarjetaProfesional } from '../../components/profesionales/TarjetaProfesional';
@@ -17,6 +18,7 @@ type OrdenBy = 'nombre' | 'citas_mes' | 'citas_total';
 
 const ProfesionalesPage: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [conteos, setConteos] = useState<Record<string, { total: number; mes: number; hoy: number }>>({});
   const [cargando, setCargando] = useState(true);
@@ -265,10 +267,10 @@ const ProfesionalesPage: React.FC = () => {
                   { nombre: 'Sebastián Monsalve Astudillo', rut: '18.553.131-7', rol: 'tecnologo', especialidad: 'Ecografía', color: '#0F766E', activo: true }
                 ];
                 for (const p of profs) {
-                  await addDoc(collection(db, 'profesionales'), { ...p, creadoEn: serverTimestamp() });
+                  await addDoc(collection(db, 'usuarios'), { ...p, creadoEn: serverTimestamp() });
                 }
                 cargarProfesionales();
-              } catch (e) { console.error(e); alert('Error: ' + (e as Error).message); }
+              } catch (e) { console.error(e); void dialog.alert('Error: ' + (e as Error).message); }
             }}
             className="inline-flex items-center gap-2 text-white bg-[#0E7490] hover:bg-[#0c6680] text-sm px-5 py-2.5 rounded-xl transition-colors font-semibold"
           >

@@ -65,3 +65,84 @@ html.dark {
   --header-bg:            #1E293B;
   --header-border:        #334155;
 }
+
+/* ─── Modo oscuro · remapeo de utilidades neutras hardcodeadas ───────────────
+   Muchas páginas usan clases Tailwind claras (bg-white, text-slate-800,
+   border-slate-200…) que no leen los tokens y por eso quedan blancas en dark.
+   Las reescribimos SOLO dentro del área de contenido (.content-scroll) para:
+     · no afectar el sidebar (siempre oscuro, usa bg-white/opacidad),
+     · no tocar vistas de "papel" (PdfPreviewInforme usa estilos inline #fff,
+       y el visor de informes se renderiza vía portal fuera de este scope).
+   Tampoco tocamos blancos puros de texto/acento (text-white) ni los
+   slate-700/800/900 que ya son superficies oscuras intencionales.
+   ──────────────────────────────────────────────────────────────────────── */
+html.dark .content-scroll {
+  --dk-surface:     #1E293B;   /* tarjeta */
+  --dk-surface-in:  #161F2E;   /* panel recesado (slate-50) */
+  --dk-surface-up:  #243144;   /* panel elevado / badge / hover (slate-100) */
+  --dk-surface-2:   #2C3A50;   /* slate-200 */
+  --dk-surface-3:   #34425A;   /* slate-300 */
+  --dk-border:      #334155;
+  --dk-text:        #F1F5F9;
+  --dk-text-2:      #CBD5E1;
+  --dk-text-muted:  #94A3B8;
+}
+
+/* Superficies */
+html.dark .content-scroll .bg-white,
+html.dark .content-scroll .hover\:bg-white:hover     { background-color: var(--dk-surface)    !important; }
+html.dark .content-scroll .bg-slate-50,
+html.dark .content-scroll .bg-gray-50,
+html.dark .content-scroll .hover\:bg-slate-50:hover,
+html.dark .content-scroll .hover\:bg-gray-50:hover   { background-color: var(--dk-surface-in)  !important; }
+html.dark .content-scroll .bg-slate-100,
+html.dark .content-scroll .bg-gray-100,
+html.dark .content-scroll .hover\:bg-slate-100:hover { background-color: var(--dk-surface-up)  !important; }
+html.dark .content-scroll .bg-slate-200,
+html.dark .content-scroll .hover\:bg-slate-200:hover { background-color: var(--dk-surface-2)   !important; }
+html.dark .content-scroll .bg-slate-300             { background-color: var(--dk-surface-3)   !important; }
+
+/* Texto principal */
+html.dark .content-scroll .text-slate-900,
+html.dark .content-scroll .text-slate-800,
+html.dark .content-scroll .text-slate-700,
+html.dark .content-scroll .text-gray-900,
+html.dark .content-scroll .text-gray-800,
+html.dark .content-scroll .text-gray-700,
+html.dark .content-scroll .hover\:text-slate-900:hover,
+html.dark .content-scroll .hover\:text-slate-800:hover,
+html.dark .content-scroll .hover\:text-slate-700:hover,
+html.dark .content-scroll .hover\:text-gray-900:hover { color: var(--dk-text) !important; }
+
+/* Texto secundario */
+html.dark .content-scroll .text-slate-600,
+html.dark .content-scroll .text-slate-500,
+html.dark .content-scroll .text-gray-600,
+html.dark .content-scroll .text-gray-500,
+html.dark .content-scroll .hover\:text-slate-600:hover { color: var(--dk-text-2) !important; }
+
+/* Texto muted */
+html.dark .content-scroll .text-slate-400,
+html.dark .content-scroll .text-gray-400 { color: var(--dk-text-muted) !important; }
+
+/* Placeholders */
+html.dark .content-scroll .placeholder-slate-400::placeholder,
+html.dark .content-scroll .placeholder-slate-500::placeholder { color: var(--dk-text-muted) !important; }
+
+/* Bordes */
+html.dark .content-scroll .border-slate-100,
+html.dark .content-scroll .border-slate-200,
+html.dark .content-scroll .border-slate-300,
+html.dark .content-scroll .border-slate-400,
+html.dark .content-scroll .border-gray-100,
+html.dark .content-scroll .border-gray-200,
+html.dark .content-scroll .border-gray-300,
+html.dark .content-scroll .border-gray-400,
+html.dark .content-scroll .hover\:border-slate-300:hover,
+html.dark .content-scroll .hover\:border-slate-400:hover,
+html.dark .content-scroll .hover\:border-gray-400:hover { border-color: var(--dk-border) !important; }
+
+/* Divisores */
+html.dark .content-scroll .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+html.dark .content-scroll .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .content-scroll .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--dk-border) !important; }

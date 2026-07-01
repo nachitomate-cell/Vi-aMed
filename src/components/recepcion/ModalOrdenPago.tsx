@@ -32,7 +32,8 @@ interface OrdenData {
 }
 
 interface ModalOrdenPagoProps {
-  registro: {
+  /** Registro de una cita (se cargan los datos completos desde Firestore). */
+  registro?: {
     id: string;
     pacienteNombre: string;
     pacienteRut: string;
@@ -40,6 +41,8 @@ interface ModalOrdenPagoProps {
     nOperacion?: string;
     tipoAtencion?: string;
   };
+  /** Datos directos de la orden (cuando NO proviene de una cita; ej: planilla). */
+  datos?: OrdenData;
   onCerrar: () => void;
 }
 
@@ -74,14 +77,22 @@ const sexoLabel = (s?: string) => {
 };
 
 
-const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) => {
+const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, datos: datosDirectos, onCerrar }) => {
   const [cargando, setCargando] = useState(false);
   const [errorPdf, setErrorPdf] = useState<string | null>(null);
-  const [datosCompletos, setDatosCompletos] = useState<OrdenData | null>(null);
-  const [cargandoDatos, setCargandoDatos] = useState(true);
+  const [datosCompletos, setDatosCompletos] = useState<OrdenData | null>(datosDirectos ?? null);
+  const [cargandoDatos, setCargandoDatos] = useState(!datosDirectos);
 
   /* ── Cargar datos completos de Firebase ──────────────────── */
   useEffect(() => {
+    // Si se pasan datos directos (ej: desde la planilla), no se consulta `citas`.
+    if (datosDirectos) {
+      setDatosCompletos(datosDirectos);
+      setCargandoDatos(false);
+      return;
+    }
+    if (!registro) { setCargandoDatos(false); return; }
+
     const cargar = async () => {
       try {
         const snap = await getDoc(doc(db, 'citas', registro.id));
@@ -112,7 +123,7 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
       }
     };
     cargar();
-  }, [registro.id]);
+  }, [registro, datosDirectos]);
 
   const datos = datosCompletos;
 
@@ -195,9 +206,10 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
 
       // Guardar registro en Firestore
       const total = prestaciones.reduce((acc, p) => acc + montoPresta(p), 0);
-      await Promise.all([
+      const tareas: Promise<unknown>[] = [
         addDoc(collection(db, 'ordenes_pago'), {
-          citaId:          registro.id,
+          citaId:          registro?.id ?? null,
+          origen:          registro?.id ? 'cita' : 'planilla',
           pacienteNombre:  datos?.pacienteNombre ?? '',
           pacienteRut:     datos?.pacienteRut ?? '',
           metodoPago:      datos?.metodoPago ?? '',
@@ -206,11 +218,15 @@ const ModalOrdenPago: React.FC<ModalOrdenPagoProps> = ({ registro, onCerrar }) =
           total,
           generadoEn:      serverTimestamp(),
         }),
-        updateDoc(doc(db, 'citas', registro.id), {
+      ];
+      // Solo marca la cita si la orden proviene de una cita real.
+      if (registro?.id) {
+        tareas.push(updateDoc(doc(db, 'citas', registro.id), {
           ordenPagoGenerada: true,
           fechaOrdenPago:    serverTimestamp(),
-        }),
-      ]);
+        }));
+      }
+      await Promise.all(tareas);
     } catch (err) {
       console.error('Error generando PDF:', err);
       setErrorPdf(err instanceof Error ? err.message : 'No se pudo generar el PDF');

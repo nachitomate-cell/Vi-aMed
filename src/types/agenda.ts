@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type EstadoCita = 'Agendado' | 'Confirmado' | 'En espera' | 'En atención' | 'Rezagado' | 'Finalizado' | 'Anulado' | 'No asistió';
+export type EstadoCita = 'Agendado' | 'Confirmado' | 'En espera' | 'En atención' | 'Rezagado' | 'Finalizado' | 'Anulado' | 'No asistió' | 'Reagendado';
 export type RolProfesional = 'medico' | 'tecnologo' | 'enfermero' | 'secretaria' | 'admin';
 
 export const BOXES = ['Box 1', 'Box 2', 'Sala de procedimientos', 'Sala de espera'] as const;
@@ -17,6 +17,7 @@ export const ESTADO_LABELS: Record<EstadoCita, string> = {
   'Finalizado': 'Finalizado',
   'Anulado': 'Anulado',
   'No asistió': 'No asistió',
+  'Reagendado': 'Reagendado',
 };
 
 export const ESTADO_COLORS: Record<EstadoCita, string> = {
@@ -28,6 +29,7 @@ export const ESTADO_COLORS: Record<EstadoCita, string> = {
   'Finalizado': 'bg-indigo-500/15 text-indigo-600 border-indigo-500/30',
   'Anulado': 'bg-red-500/15 text-red-600 border-red-500/30',
   'No asistió': 'bg-rose-500/15 text-rose-600 border-rose-500/30',
+  'Reagendado': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
 };
 
 export const ESTADO_BORDER: Record<EstadoCita, string> = {
@@ -39,6 +41,7 @@ export const ESTADO_BORDER: Record<EstadoCita, string> = {
   'Finalizado': 'border-l-indigo-600',
   'Anulado': 'border-l-red-500',
   'No asistió': 'border-l-rose-500',
+  'Reagendado': 'border-l-purple-500',
 };
 
 export interface Cita {

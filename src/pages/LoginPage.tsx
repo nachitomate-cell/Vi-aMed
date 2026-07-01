@@ -223,6 +223,37 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  // ── ACCESO TEMPORAL DE ADMINISTRADOR (bypass de Firebase Auth) ──────────────
+  // TODO: Eliminar antes de producción. Permite entrar mientras se resuelven
+  // las credenciales de Firebase Auth.
+  //
+  // Intenta además una sesión ANÓNIMA de Firebase para que las escrituras a
+  // Firestore (que exigen request.auth != null) funcionen durante la demo.
+  // Requiere tener habilitado el proveedor "Anónimo" en Firebase Auth; si no
+  // lo está, igual se entra (modo solo-lectura) sin bloquear el flujo.
+  const handleAdminBypass = async (): Promise<void> => {
+    try {
+      const { signInAnonymously } = await import('firebase/auth');
+      const { authVinamed } = await import('../lib/firebase');
+      await signInAnonymously(authVinamed);
+    } catch (e) {
+      console.warn('No se pudo iniciar sesión anónima (modo solo-lectura):', e);
+    }
+    login({
+      uid: 'dev-admin',
+      rut: '11.111.111-1',
+      name: 'Administrador (Demo)',
+      role: 'ADMIN',
+    });
+    const target = from ?? determinarRedirectPostLogin();
+    navigate('/intro', { replace: true, state: { to: target } });
+  };
+
+  // 🔒 TEMPORAL: oculta el ingreso con RUT/contraseña y deja solo el acceso de
+  // administrador, mientras se carga la base de datos. Poner en false para
+  // volver al login normal.
+  const SOLO_ADMIN = true;
+
   const rutInputClass = [
     'lp-input',
     showRutError ? 'lp-input--error' : '',
@@ -398,10 +429,10 @@ const LoginPage: React.FC = () => {
                 margin: '0 0 8px',
                 lineHeight: 1.2,
               }}>
-                Acceso al Sistema
+                {SOLO_ADMIN ? 'Acceso de prueba' : 'Acceso al Sistema'}
               </h1>
               <p style={{ color: '#64748B', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-                Ingrese sus credenciales de acceso para continuar.
+                {SOLO_ADMIN ? 'Ingreso temporal mientras se configura el sistema.' : 'Ingrese sus credenciales de acceso para continuar.'}
               </p>
             </header>
 
@@ -411,7 +442,37 @@ const LoginPage: React.FC = () => {
             }} />
 
             {/* Formulario / Recuperación */}
-            {vista === 'login' ? (
+            {SOLO_ADMIN ? (
+              <div className="anim-form-1" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Aviso temporal */}
+                <div style={{
+                  display: 'flex', gap: '12px', alignItems: 'flex-start',
+                  background: '#FFFBEB', border: '1.5px solid #FDE68A', borderRadius: '12px',
+                  padding: '14px 16px',
+                }}>
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth={2} style={{ flexShrink: 0, marginTop: '1px' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 3h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#92400E', lineHeight: 1.5 }}>
+                    <b>Acceso temporal.</b> Por ahora solo se ingresa como Administrador para pruebas.
+                    Esto se cambiará por el ingreso con RUT y contraseña en cuanto se cargue la base de datos.
+                  </p>
+                </div>
+
+                {/* Botón grande: Ingresar como Administrador */}
+                <button
+                  type="button"
+                  onClick={handleAdminBypass}
+                  className="lp-btn"
+                  style={{ height: '58px', fontSize: '16px', marginTop: '4px' }}
+                >
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  Ingresar como Administrador
+                </button>
+              </div>
+            ) : vista === 'login' ? (
               <>
                 <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {/* Campo RUT */}
@@ -530,6 +591,37 @@ const LoginPage: React.FC = () => {
                       }}
                     >
                       ¿Olvidaste tu contraseña?
+                    </button>
+
+                    {/* ── Botón temporal: acceso directo como Administrador ── */}
+                    <button
+                      type="button"
+                      onClick={handleAdminBypass}
+                      style={{
+                        width: '100%',
+                        height: '44px',
+                        marginTop: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        borderRadius: '10px',
+                        background: '#fff',
+                        color: '#0E7490',
+                        fontWeight: 600,
+                        fontSize: '14px',
+                        border: '1.5px dashed #0E7490',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        transition: 'background 0.18s',
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.background = '#ECFEFF')}
+                      onMouseOut={(e) => (e.currentTarget.style.background = '#fff')}
+                    >
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                      Ingresar como Administrador (temporal)
                     </button>
                   </div>
                 </form>

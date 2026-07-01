@@ -12,7 +12,7 @@ export const crearProfesional = onCall(async (request: CallableRequest) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'No autenticado');
 
   const callerDoc = await admin.firestore()
-    .collection('profesionales')
+    .collection('usuarios')
     .doc(request.auth.uid).get();
 
   if (!callerDoc.exists || callerDoc.data()?.rol !== 'admin') {
@@ -29,9 +29,9 @@ export const crearProfesional = onCall(async (request: CallableRequest) => {
     displayName: nombre,
   });
 
-  // 2. Crear documento en Firestore (profesionales)
+  // 2. Crear documento en Firestore (usuarios)
   await admin.firestore()
-    .collection('profesionales')
+    .collection('usuarios')
     .doc(userRecord.uid).set({
       uid:          userRecord.uid,
       nombre,

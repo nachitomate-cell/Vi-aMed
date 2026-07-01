@@ -226,7 +226,7 @@ export const registrarProfesional = onCall(async (request: CallableRequest) => {
     });
 
     // 2. Crear doc en Firestore
-    await admin.firestore().collection('profesionales').doc(userRecord.uid).set({
+    await admin.firestore().collection('usuarios').doc(userRecord.uid).set({
       uid: userRecord.uid,
       nombre,
       rut,

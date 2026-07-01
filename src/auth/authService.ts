@@ -78,16 +78,6 @@ export async function loginWithCredentials(rut: string, password: string): Promi
       userData = snapUsers.docs[0].data();
       email = userData.email;
       rolRaw = userData.rol || userData.role;
-    } else {
-      // 2. Si no es usuario administrativo, buscar en profesionales
-      const qProf = query(collection(dbVinamed, 'profesionales'), where('rut', '==', rutNormalizado));
-      const snapProf = await getDocs(qProf);
-
-      if (!snapProf.empty) {
-        userData = snapProf.docs[0].data();
-        email = userData.email;
-        rolRaw = userData.rol;
-      }
     }
 
     if (!userData) {

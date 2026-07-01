@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
 
 interface Retiro {
   id: string;
@@ -17,6 +18,7 @@ const LABS = ['Diagnomed', 'Etcheverry Lab', 'Laboclin', 'Bionet', 'Endoclin'];
 
 const RetirosPage: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const [loading, setLoading] = useState(false);
   const [retiros, setRetiros] = useState<Retiro[]>([]);
   const [form, setForm] = useState({ lab: '', nombre: '', temperatura: '', numMuestras: '' });
@@ -57,10 +59,10 @@ const RetirosPage: React.FC = () => {
 
       setForm({ lab: '', nombre: '', temperatura: '', numMuestras: '' });
       fetchRetiros();
-      alert('Retiro registrado correctamente');
+      await dialog.alert('Retiro registrado correctamente');
     } catch (e) {
       console.error(e);
-      alert('Error al registrar retiro');
+      await dialog.alert('Error al registrar retiro');
     }
   };
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   collection, query, where, orderBy, onSnapshot, updateDoc, doc, deleteDoc, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
 import { useNavigate } from 'react-router-dom';
 import type { EstadoCita } from '../types/agenda';
 import { ESTADO_COLORS, ESTADO_LABELS } from '../types/agenda';
@@ -23,88 +24,58 @@ interface RegistroRecepcion {
 }
 
 /* ── Constantes ─────────────────────────────────────────── */
-const ESTADOS_OPCIONES: EstadoCita[] = ['Agendado', 'Confirmado', 'En espera', 'En atención', 'Rezagado', 'Finalizado', 'Anulado', 'No asistió'];
+// En Recepción solo existen 3 estados de atención, y se ciclan tocando el botón.
+const ESTADOS_OPCIONES: EstadoCita[] = ['En atención', 'Finalizado', 'Reagendado'];
+
+// Estado siguiente al tocar el botón (ciclo): En atención → Finalizado → Reagendado → …
+const SIGUIENTE_ESTADO: Record<EstadoCita, EstadoCita> = {
+  'En atención': 'Finalizado',
+  'Finalizado': 'Reagendado',
+  'Reagendado': 'En atención',
+  // Cualquier estado heredado entra al ciclo por "En atención".
+  'Agendado': 'Finalizado',
+  'Confirmado': 'Finalizado',
+  'En espera': 'Finalizado',
+  'Rezagado': 'Finalizado',
+  'Anulado': 'Finalizado',
+  'No asistió': 'Finalizado',
+};
 
 const normalizeEstado = (est: string): EstadoCita => {
-  const mapping: Record<string, EstadoCita> = {
-    solicitada: 'Agendado',
-    confirmada: 'Confirmado',
-    realizada: 'En espera',
-    atendido: 'En atención',
-    finalizado: 'Finalizado',
-    cancelada: 'Anulado',
-    no_asistio: 'No asistió',
-  };
-  return mapping[est] || (ESTADOS_OPCIONES.includes(est as EstadoCita) ? (est as EstadoCita) : 'Agendado');
+  const e = (est || '').toLowerCase().trim();
+  if (['finalizado', 'finalizada', 'realizada'].includes(e)) return 'Finalizado';
+  if (['reagendado', 'reagendada'].includes(e)) return 'Reagendado';
+  // Todo lo demás (agendado, confirmado, en espera, en atención, rezagado,
+  // anulado, no asistió, etc.) se muestra como "En atención".
+  return 'En atención';
 };
 
-/* ── Selector de estado inline ─────────────────────────── */
-const SelectorEstado: React.FC<{
+/* ── Botón de estado cíclico ───────────────────────────── */
+// Un solo clic avanza al siguiente estado: En atención → Finalizado → Reagendado → …
+const BotonEstado: React.FC<{
   value: EstadoCita;
   onChange: (e: EstadoCita) => void;
-}> = ({ value, onChange }) => {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  const handleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!open && btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 6, left: r.left });
-    }
-    setOpen(o => !o);
-  };
-
-  return (
-    <div>
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all duration-200 shadow-sm ${ESTADO_COLORS[value] || 'bg-slate-100'}`}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-        {ESTADO_LABELS[value] || value}
-        <svg className={`w-3 h-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
-          <div
-            className="fixed z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden min-w-[180px] animate-in fade-in zoom-in-95 duration-150 p-1.5"
-            style={{ top: pos.top, left: pos.left }}
-          >
-            <div className="px-2 py-1.5 mb-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cambiar estado</span>
-            </div>
-            {ESTADOS_OPCIONES.map(est => (
-              <button
-                key={est}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChange(est);
-                  setOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-3 mb-0.5 last:mb-0 ${
-                  value === est ? 'bg-slate-50 text-[#0E7490]' : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${ESTADO_COLORS[est].split(' ')[1].replace('text-', 'bg-')}`} />
-                {ESTADO_LABELS[est]}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
+}> = ({ value, onChange }) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onChange(SIGUIENTE_ESTADO[value] ?? 'En atención');
+    }}
+    title="Tocar para cambiar de estado"
+    className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all duration-200 shadow-sm hover:brightness-95 active:scale-95 ${ESTADO_COLORS[value] || 'bg-slate-100'}`}
+  >
+    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+    {ESTADO_LABELS[value] || value}
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  </button>
+);
 
 /* ── Page ────────────────────────────────────────────────── */
 const RecepcionPage: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const today = new Date();
   
   const todayStr = today.toISOString().split('T')[0];
@@ -161,7 +132,7 @@ const RecepcionPage: React.FC = () => {
   };
 
   const handleEliminar = async (id: string, nombre: string) => {
-    if (!window.confirm(`¿Eliminar el registro de "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    if (!(await dialog.confirm(`¿Eliminar el registro de "${nombre}"? Esta acción no se puede deshacer.`, { title: 'Eliminar registro', confirmText: 'Eliminar', danger: true }))) return;
     await deleteDoc(doc(db, 'citas', id));
   };
 
@@ -241,12 +212,11 @@ const RecepcionPage: React.FC = () => {
 
       {/* Stats rápidas del día */}
       {esHoy && registros.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'En espera', estado: 'En espera' as EstadoCita, color: 'bg-amber-50 border-amber-200 text-amber-700' },
             { label: 'En atención', estado: 'En atención' as EstadoCita, color: 'bg-blue-50 border-blue-200 text-blue-700' },
             { label: 'Finalizados', estado: 'Finalizado' as EstadoCita, color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-            { label: 'Pendientes', estado: 'Agendado' as EstadoCita, color: 'bg-slate-50 border-slate-200 text-slate-600' },
+            { label: 'Reagendados', estado: 'Reagendado' as EstadoCita, color: 'bg-purple-50 border-purple-200 text-purple-700' },
           ].map(({ label, estado, color }) => (
             <button
               key={estado}
@@ -490,7 +460,7 @@ const RecepcionPage: React.FC = () => {
 
                   {/* Estado */}
                   <div>
-                    <SelectorEstado
+                    <BotonEstado
                       value={r.estado}
                       onChange={nuevoEstado => handleCambiarEstado(r.id, nuevoEstado)}
                     />

@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useGestionDatos } from '../hooks/useGestionDatos';
 import { collection, getDocs, getDoc, query, where, doc, updateDoc, addDoc, serverTimestamp, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
 import { getProfesionales } from '../services/agendaService';
 import type { Profesional } from '../types/agenda';
+import AvisoLegalDatos from '../components/dashboard/AvisoLegalDatos';
 
 interface PacienteData {
   id?: string;
@@ -72,6 +74,7 @@ const normalizeEstado = (est: string): string => {
 
 const AtencionPage: React.FC = () => {
   const navigate = useNavigate();
+  const dialog = useDialog();
   const { atencionId } = useParams();
   
   // Formulario principal
@@ -279,7 +282,7 @@ const AtencionPage: React.FC = () => {
 
   const handleAddPrestacion = () => {
     if (!nuevaPrestacion.especialidad || !nuevaPrestacion.profesional || !nuevaPrestacion.prestacion) {
-      alert('Especialidad, Profesional y Prestación son obligatorios para agregar la prestación.');
+      void dialog.alert('Especialidad, Profesional y Prestación son obligatorios para agregar la prestación.');
       return;
     }
     setPrestaciones([...prestaciones, nuevaPrestacion as Prestacion]);
@@ -299,6 +302,79 @@ const AtencionPage: React.FC = () => {
     setShowError(false);
     setNotification(null);
     setTimeout(() => searchRef.current?.focus(), 150);
+  };
+
+  // ── Rellenar con datos de prueba (para demostraciones) ──
+  const rellenarDatosPrueba = () => {
+    const nombresDemo = ['Juan José', 'María Fernanda', 'Pedro Antonio', 'Camila Andrea', 'Diego Alonso', 'Valentina Paz'];
+    const paternosDemo = ['Pérez', 'González', 'Muñoz', 'Rojas', 'Díaz', 'Contreras'];
+    const maternosDemo = ['Soto', 'Fuentes', 'Reyes', 'Castro', 'Vargas', 'Morales'];
+
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+    // RUT aleatorio con dígito verificador válido (módulo 11)
+    const cuerpo = 10000000 + Math.floor(Math.random() * 9999999);
+    let suma = 0, mul = 2;
+    for (const c of String(cuerpo).split('').reverse()) {
+      suma += Number(c) * mul;
+      mul = mul === 7 ? 2 : mul + 1;
+    }
+    const resto = 11 - (suma % 11);
+    const dv = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+    const rutDemo = `${formatCuerpoRut(String(cuerpo))}-${dv}`;
+
+    const nombres = pick(nombresDemo);
+    const apellidoPaterno = pick(paternosDemo);
+    const apellidoMaterno = pick(maternosDemo);
+
+    const año = 1960 + Math.floor(Math.random() * 50);
+    const mes = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+    const dia = String(1 + Math.floor(Math.random() * 28)).padStart(2, '0');
+
+    setPaciente({
+      nombres,
+      apellidoPaterno,
+      apellidoMaterno,
+      nombre: `${nombres} ${apellidoPaterno} ${apellidoMaterno}`,
+      rut: rutDemo,
+      fechaNacimiento: `${año}-${mes}-${dia}`,
+      sexo: opciones.sexos[0] || 'Masculino',
+      telefono: `+569 ${1000 + Math.floor(Math.random() * 8999)} ${1000 + Math.floor(Math.random() * 8999)}`,
+      correo: `${nombres.split(' ')[0].toLowerCase()}.${apellidoPaterno.toLowerCase()}@ejemplo.cl`,
+      prevision: opciones.previsiones[0] || 'Fonasa',
+    });
+    setSearchQuery(`${nombres} ${apellidoPaterno} ${apellidoMaterno}`);
+    setPacienteSeleccionado(false);
+
+    setDatosAtencion({
+      fecha: new Date().toISOString().split('T')[0],
+      hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+      metodoPago: opciones.metodosPago[0] || 'Efectivo',
+      nroOperacion: String(100000 + Math.floor(Math.random() * 899999)),
+      observaciones: 'Paciente de prueba generado automáticamente para demostración.',
+      estado: 'En espera',
+    });
+
+    // Agregar una prestación de ejemplo desde el catálogo (si está disponible)
+    if (catalogoPrestaciones.length > 0) {
+      const cat = catalogoPrestaciones[0];
+      const prevElegida = opciones.previsiones[0] || 'Fonasa';
+      const vp = cat.valoresPrevision?.find(v => v.tipo === prevElegida) || cat.valoresPrevision?.[0];
+      const prof = profesionalesDB.find(p => p.especialidad === cat.especialidad) || profesionalesDB[0];
+      setPrestaciones([{
+        especialidad: cat.especialidad,
+        profesional: prof?.nombre || 'Dr. Demostración',
+        prestacion: cat.nombre,
+        valor: vp?.valor ?? 0,
+        copago: vp?.copago ?? 0,
+        bonoComplementario: 0,
+        observaciones: '',
+      }]);
+    }
+
+    setShowError(false);
+    setStep(1);
+    setNotification({ type: 'success', msg: 'Datos de prueba cargados. Revisa los pasos y guarda.' });
   };
 
   const [step, setStep] = useState(1);
@@ -434,13 +510,29 @@ const AtencionPage: React.FC = () => {
             {atencionId ? 'Modifica los datos del registro clínico' : 'Ingresa los datos del paciente y de la atención'}
           </p>
         </div>
-        <button
-          onClick={() => navigate('/recepcion')}
-          className="px-4 py-2 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors"
-        >
-          Volver a Recepción
-        </button>
+        <div className="flex items-center gap-2">
+          {!atencionId && (
+            <button
+              onClick={rellenarDatosPrueba}
+              title="Rellena todos los campos con un paciente ficticio para demostraciones"
+              className="flex items-center gap-2 px-4 py-2 border border-dashed border-[#0E7490]/40 text-[#0E7490] rounded-xl hover:bg-[#0E7490]/5 transition-colors text-sm font-semibold"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Datos de prueba
+            </button>
+          )}
+          <button
+            onClick={() => navigate('/recepcion')}
+            className="px-4 py-2 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors"
+          >
+            Volver a Recepción
+          </button>
+        </div>
       </div>
+
+      <AvisoLegalDatos />
 
       {renderStepIndicator()}
 

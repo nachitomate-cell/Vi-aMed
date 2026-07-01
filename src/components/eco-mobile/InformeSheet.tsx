@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { useDialog } from '../ui/DialogProvider';
 import {
   INITIAL_FORM,
   mapearTipoAtencionAExamen,
@@ -45,6 +46,7 @@ const Spinner: React.FC = () => (
 
 const InformeSheet: React.FC<InformeSheetProps> = ({ patient, onClose, onSaved }) => {
   const { user } = useAuth();
+  const dialog = useDialog();
   const [form, setForm] = useState<DatosInformeEco>(() =>
     buildInitialForm(patient, user?.name ?? ''),
   );
@@ -66,12 +68,12 @@ const InformeSheet: React.FC<InformeSheetProps> = ({ patient, onClose, onSaved }
     setForm(f => ({ ...f, [key]: value }));
   }, []);
 
-  const attemptClose = useCallback(() => {
+  const attemptClose = useCallback(async () => {
     if (isDirty.current) {
-      if (!window.confirm('Hay cambios sin guardar. ¿Cerrar de todas formas?')) return;
+      if (!(await dialog.confirm('Hay cambios sin guardar. ¿Cerrar de todas formas?', { title: 'Cambios sin guardar', confirmText: 'Cerrar', danger: true }))) return;
     }
     onClose();
-  }, [onClose]);
+  }, [onClose, dialog]);
 
   const onDragStart = (e: React.TouchEvent) => {
     dragStartY.current = e.touches[0].clientY;

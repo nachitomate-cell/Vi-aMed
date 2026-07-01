@@ -10,12 +10,42 @@ service cloud.firestore {
       return isAuth();
     }
 
+    // ── Enforcement de rol Administrador (defensa en profundidad) ─────────────
+    // Hoy la app valida el rol solo en el cliente. Para exigirlo también en el
+    // servidor, define un custom claim `admin` en el token (vía Cloud Function
+    // con admin.auth().setCustomUserClaims(uid, { admin: true })) y cambia los
+    // `write: if isStaff()` de las colecciones gestion_* por `write: if isAdmin()`.
+    // Se deja preparado pero NO activado para no bloquear a los usuarios actuales
+    // hasta que se hayan emitido los claims.
+    function isAdmin() {
+      return isAuth() && request.auth.token.admin == true;
+    }
+
     // ── Citas ────────────────────────────────────────────────────
     match /citas/{citaId} {
       allow read: if true;
       allow create: if true;
       allow update: if true;
       allow delete: if isStaff();
+    }
+
+    // ── Planilla diaria / Caja ───────────────────────────────────
+    // Misma postura que citas/pacientes (write abierto) para permitir el
+    // autoguardado y la importación sin sesión real. TODO: cambiar write a
+    // isStaff()/isAdmin() cuando el login real esté operativo.
+    match /planillas/{jornadaId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /planillas_meta/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ── Generador de PDF (Imágenes a PDF) ────────────────────────
+    match /generadorPdf/{docId} {
+      allow read: if true;
+      allow write: if true;
     }
 
     // ── Resultados (informes eco) ────────────────────────────────
@@ -128,14 +158,33 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // ── Toma de Muestras (órdenes y retiros) ─────────────────────
+    match /setm_ordenes/{id} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /setm_retiros/{id} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     match /registro_temperatura/{id} {
       allow read: if isStaff();
       allow write: if isStaff();
     }
 
+    // Misma postura que pacientes/users/citas: lectura/escritura abiertas
+    // mientras la app no tenga sesión Firebase real (login anónimo deshabilitado).
+    // TODO: cerrar a isStaff()/isAdmin() cuando el login real esté operativo.
     match /fichas_clinicas/{rut} {
-      allow read: if isStaff();
-      allow write: if isStaff();
+      allow read: if true;
+      allow write: if true;
+
+      // Evoluciones (consultas por fecha) y documentos emitidos (licencias/recetas)
+      match /{subcoleccion}/{docId} {
+        allow read: if true;
+        allow write: if true;
+      }
     }
   }
 }

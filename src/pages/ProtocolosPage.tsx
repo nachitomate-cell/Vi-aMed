@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storageVinamed } from '../lib/firebase';
+import { useDialog } from '../components/ui/DialogProvider';
 
 interface ProtocoloDoc {
   id?: string;
@@ -27,6 +28,7 @@ const FileIcon: React.FC<{ ext: string }> = ({ ext }) => {
 };
 
 const ModalUpload: React.FC<{ onCerrar: () => void; onExito: () => void }> = ({ onCerrar, onExito }) => {
+  const dialog = useDialog();
   const [file, setFile] = useState<File | null>(null);
   const [titulo, setTitulo] = useState('');
   const [categoria, setCategoria] = useState<typeof CATEGORIAS[number]>('Protocolo Clínico');
@@ -54,7 +56,7 @@ const ModalUpload: React.FC<{ onCerrar: () => void; onExito: () => void }> = ({ 
       onCerrar();
     } catch (e) {
       console.error(e);
-      alert('Error al subir el archivo');
+      await dialog.alert('Error al subir el archivo');
     } finally {
       setSubiendo(false);
     }

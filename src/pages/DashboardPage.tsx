@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { esMobile } from '../utils/device';
+import AvisoLegalDatos from '../components/dashboard/AvisoLegalDatos';
+import AgendaDelDia from '../components/dashboard/AgendaDelDia';
 
 // ─── Helpers de fecha ─────────────────────────────────────────────────────────
 const DIAS_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -123,6 +125,7 @@ const DashboardPage: React.FC = () => {
     fecha: Timestamp;
   }[]>([]);
   const [loadingCitas, setLoadingCitas] = useState(true);
+  const [actividadAbierta, setActividadAbierta] = useState(false);
 
   useEffect(() => {
     const q = query(
@@ -220,6 +223,9 @@ const DashboardPage: React.FC = () => {
         </p>
       </div>
 
+      {/* ── Aviso legal de protección de datos ────────────────────── */}
+      <AvisoLegalDatos />
+
       {/* ── KPI Cards ─────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
         <KpiCard label="Pacientes hoy"  valor={stats.pacientesHoy.toString()} sub="Registrados"     accent />
@@ -227,6 +233,9 @@ const DashboardPage: React.FC = () => {
         <KpiCard label="Muestras"       valor={stats.muestras.toString()} sub="Pendientes"       />
         <KpiCard label="Procedimientos" valor={stats.procedimientos.toString()} sub="Medicina"       />
       </div>
+
+      {/* ── Agenda del día (desde la Planilla) ─────────────────────── */}
+      <AgendaDelDia />
 
       {/* ── Próximas Atenciones ───────────────────────────────────────── */}
       <div style={{
@@ -238,7 +247,7 @@ const DashboardPage: React.FC = () => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           {sectionLabel('Próximas atenciones para hoy')}
-          <button onClick={() => navigate('/agenda')} style={{ fontSize: 11, color: 'var(--color-primary)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Ver agenda completa →</button>
+          <button onClick={() => navigate('/planilla')} style={{ fontSize: 11, color: 'var(--color-primary)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Ver agenda completa →</button>
         </div>
         {proximasCitas.length === 0 ? (
            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>No hay pacientes pendientes para el resto del día.</p>
@@ -377,13 +386,61 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Actividad Reciente ────────────────────────────────────── */}
+      {/* ── Actividad Reciente (persiana) ─────────────────────────── */}
       <div>
-        {sectionLabel('Actividad Reciente — Últimos 5 pacientes')}
+        <button
+          onClick={() => setActividadAbierta(o => !o)}
+          aria-expanded={actividadAbierta}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'var(--surface-card)',
+            border: '0.5px solid var(--surface-card-border)',
+            borderRadius: actividadAbierta ? '12px 12px 0 0' : 12,
+            padding: '14px 20px',
+            cursor: 'pointer',
+            transition: 'border-radius 0.15s',
+          }}
+        >
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.07em',
+          }}>
+            Actividad Reciente — Últimos 5 pacientes
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {!loadingCitas && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
+                background: 'rgba(14,116,144,0.1)', color: 'var(--color-primary)',
+              }}>
+                {ultimasCitas.length}
+              </span>
+            )}
+            <svg
+              viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor"
+              strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+              style={{
+                color: 'var(--text-secondary)',
+                transform: actividadAbierta ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+        </button>
+        {actividadAbierta && (
         <div style={{
           background: 'var(--surface-card)',
           border: '0.5px solid var(--surface-card-border)',
-          borderRadius: 12,
+          borderTop: 'none',
+          borderRadius: '0 0 12px 12px',
           overflow: 'hidden',
         }}>
           {loadingCitas ? (
@@ -446,6 +503,7 @@ const DashboardPage: React.FC = () => {
             })
           )}
         </div>
+        )}
       </div>
     </div>
   );

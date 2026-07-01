@@ -9,14 +9,10 @@ import {
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../auth/AuthContext';
 
-// Sonido de campana fuerte y claro
-const ALERT_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
-
 export const NotificationManager: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [lastCitaId, setLastCitaId] = useState<string | null>(null);
   const isInitialLoad = useRef(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -25,10 +21,6 @@ export const NotificationManager: React.FC = () => {
     if (Notification.permission === 'default') {
       Notification.requestPermission();
     }
-
-    // Inicializar audio
-    audioRef.current = new Audio(ALERT_SOUND_URL);
-    audioRef.current.volume = 1.0;
 
     // Escuchar solo la última cita creada
     const q = query(
@@ -65,21 +57,13 @@ export const NotificationManager: React.FC = () => {
   }, [isAuthenticated, lastCitaId]);
 
   const playNotification = (nombre: string, tipo: string) => {
-    // 1. Sonido fuerte
-    if (audioRef.current) {
-      audioRef.current.play().catch(e => console.warn('No se pudo reproducir el sonido:', e));
-    }
-
-    // 2. Notificación del navegador
+    // Notificación del navegador (sin sonido)
     if (Notification.permission === 'granted') {
       new Notification('Nueva Cita Agendada', {
         body: `${nombre} - ${tipo}`,
         icon: '/logo.png'
       });
     }
-
-    // 3. Podríamos agregar un Toast visual aquí si tuviéramos una librería de toasts.
-    // Por ahora, el sonido y la notificación nativa cumplen el requisito de "fuerte".
   };
 
   return null; // Componente invisible

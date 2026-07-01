@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import DesktopLayout from './layouts/DesktopLayout';
 import MobilePwaLayout from './layouts/MobilePwaLayout';
 import { NotificationManager } from './components/shared/NotificationManager';
+import { DialogProvider } from './components/ui/DialogProvider';
 
 import DashboardPage from './pages/DashboardPage';
 import AtencionMedicaPage from './pages/AtencionMedicaPage';
@@ -34,6 +35,7 @@ import AgendaProfesionalPage from './pages/agenda/AgendaProfesionalPage';
 import PacienteDetallePage from './pages/PacienteDetallePage';
 import CambiarContrasenaPage from './pages/CambiarContrasenaPage';
 import GenerarPdfPage from './pages/GenerarPdfPage';
+import PlanillaDiariaPage from './pages/PlanillaDiariaPage';
 // const MamografiaPage = lazy(() => import('./pages/mamografia'));
 // const MamografiaMobilePage = lazy(() => import('./pages/mamografia-mobile'));
 const ActivarCuenta = lazy(() => import('./pages/activar-cuenta'));
@@ -115,6 +117,7 @@ const AppRoutes: React.FC = () => (
       <Route path="profesionales/:profesionalId" element={<ProfesionalPerfilPage />} />
       <Route path="nuevo-profesional" element={<NuevoProfesionalPage />} />
       <Route path="generar" element={<GenerarPdfPage />} />
+      <Route path="planilla" element={<PlanillaDiariaPage />} />
       {/* <Route
         path="mamografia"
         element={
@@ -251,8 +254,10 @@ const AppRoutes: React.FC = () => (
 const App: React.FC = () => (
   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <AuthProvider>
-      <NotificationManager />
-      <AppRoutes />
+      <DialogProvider>
+        <NotificationManager />
+        <AppRoutes />
+      </DialogProvider>
     </AuthProvider>
   </BrowserRouter>
 );

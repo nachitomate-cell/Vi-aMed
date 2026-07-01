@@ -40,6 +40,8 @@ interface FormState {
   rol: RolProfesional;
   comision: string;
   color: string;
+  password: string;
+  passwordConfirm: string;
 }
 
 const INITIAL: FormState = {
@@ -53,6 +55,8 @@ const INITIAL: FormState = {
   rol: 'medico',
   comision: '',
   color: COLORES[0],
+  password: '',
+  passwordConfirm: '',
 };
 
 const NuevoProfesionalPage: React.FC = () => {
@@ -70,6 +74,14 @@ const NuevoProfesionalPage: React.FC = () => {
       setError('Nombre y correo son obligatorios.');
       return;
     }
+    if (form.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (form.password !== form.passwordConfirm) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
 
     setGuardando(true);
     setError(null);
@@ -85,11 +97,11 @@ const NuevoProfesionalPage: React.FC = () => {
       const credential = await createUserWithEmailAndPassword(
         tempAuth,
         form.email.trim(),
-        'vinamed2026',
+        form.password,
       );
       const uid = credential.user.uid;
 
-      await addDoc(collection(db, 'profesionales'), {
+      await addDoc(collection(db, 'usuarios'), {
         uid,
         nombre:          form.nombre.trim(),
         apellidoPaterno: form.apellidoPaterno.trim(),
@@ -137,7 +149,7 @@ const NuevoProfesionalPage: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-800">Nuevo Profesional</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Se creará una cuenta con contraseña <span className="font-mono font-semibold">vinamed2026</span>
+            Crea la cuenta de acceso y define su contraseña inicial
           </p>
         </div>
       </div>
@@ -169,10 +181,24 @@ const NuevoProfesionalPage: React.FC = () => {
             onChange={v => set('email', v)}
             placeholder="Ej: carlos@vinamed.cl"
           />
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm">
-            Se creará una cuenta Firebase con contraseña temporal{' '}
-            <span className="font-mono font-bold">vinamed2026</span>.
-            El profesional deberá cambiarla al iniciar sesión.
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field
+              label="Contraseña inicial *"
+              type="password"
+              value={form.password}
+              onChange={v => set('password', v)}
+              placeholder="Mínimo 6 caracteres"
+            />
+            <Field
+              label="Repetir contraseña *"
+              type="password"
+              value={form.passwordConfirm}
+              onChange={v => set('passwordConfirm', v)}
+              placeholder="Repite la contraseña"
+            />
+          </div>
+          <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 text-sky-800 text-sm">
+            Tú defines la contraseña inicial y se la comunicas al profesional. Podrá cambiarla cuando quiera desde su perfil.
           </div>
         </section>
 
