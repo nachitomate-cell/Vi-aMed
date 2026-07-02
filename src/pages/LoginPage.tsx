@@ -232,12 +232,26 @@ const LoginPage: React.FC = () => {
   // Requiere tener habilitado el proveedor "Anónimo" en Firebase Auth; si no
   // lo está, igual se entra (modo solo-lectura) sin bloquear el flujo.
   const handleAdminBypass = async (): Promise<void> => {
+    setAuthError(null);
     try {
       const { signInAnonymously } = await import('firebase/auth');
       const { authVinamed } = await import('../lib/firebase');
       await signInAnonymously(authVinamed);
-    } catch (e) {
-      console.warn('No se pudo iniciar sesión anónima (modo solo-lectura):', e);
+    } catch (e: any) {
+      const code: string | undefined = e?.code;
+      const status: number | undefined = e?.customData?._tokenResponse?.error?.code ?? e?.status;
+
+      if (code === 'auth/admin-restricted-operation' || status === 400) {
+        const msg =
+          'Error: El inicio de sesión Anónimo no está habilitado. ' +
+          'Por favor, actívalo en la consola de Firebase en Authentication > Sign-in method.';
+        console.error(msg, e);
+        setAuthError(msg);
+      } else {
+        console.warn('No se pudo iniciar sesión anónima (modo solo-lectura):', e);
+      }
+      // No bloqueamos el flujo demo: se entra igual, sólo que Firestore quedará
+      // en modo solo-lectura para las reglas que exigen request.auth != null.
     }
     login({
       uid: 'dev-admin',

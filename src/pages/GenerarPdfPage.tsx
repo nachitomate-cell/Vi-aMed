@@ -87,13 +87,35 @@ async function generarPdfBlob(
   pacienteNombre: string,
   fecha: string,
 ): Promise<Blob> {
-  const [pdfMakeModule, pdfFontsModule] = await Promise.all([
-    import('pdfmake/build/pdfmake'),
-    import('pdfmake/build/vfs_fonts'),
-  ]);
-  const pdfMake = (pdfMakeModule as any).default ?? pdfMakeModule;
-  const pdfFonts = (pdfFontsModule as any).default ?? pdfFontsModule;
-  pdfMake.vfs = pdfFonts?.pdfMake?.vfs ?? pdfFonts?.vfs ?? {};
+  const pdfMakeModule = await import('pdfmake/build/pdfmake');
+  const pdfMake: any =
+    (pdfMakeModule as any).default ??
+    (pdfMakeModule as any).pdfMake ??
+    pdfMakeModule;
+
+  if (!pdfMake || typeof pdfMake.createPdf !== 'function') {
+    throw new Error('No se pudo cargar pdfmake. Verifique la instalación del paquete "pdfmake".');
+  }
+
+  // vfs_fonts.js hace internamente `this.pdfMake.vfs = {...}`. Bajo ESM/Vite `this`
+  // queda undefined y revienta ("cannot read properties of undefined (reading 'pdfMake')").
+  // Se expone pdfMake en el global ANTES de cargar vfs_fonts para que la asignación
+  // resuelva y las fuentes queden montadas en pdfMake.vfs.
+  if (!pdfMake.vfs || Object.keys(pdfMake.vfs).length === 0) {
+    (globalThis as any).pdfMake = pdfMake;
+    const pdfFontsModule: any = await import('pdfmake/build/vfs_fonts');
+    const vfs =
+      pdfMake.vfs ??
+      pdfFontsModule?.pdfMake?.vfs ??
+      pdfFontsModule?.vfs ??
+      pdfFontsModule?.default?.pdfMake?.vfs ??
+      pdfFontsModule?.default?.vfs;
+    if (vfs) pdfMake.vfs = vfs;
+    else {
+      console.warn('pdfmake/build/vfs_fonts no expuso las fuentes virtuales.');
+      pdfMake.vfs = {};
+    }
+  }
 
   // Plantilla réplica del Word de ecografía: página vertical ~25×35 cm
   // (709×1001 pt, igual al export real), FONDO NEGRO y ~2 imágenes por hoja.
