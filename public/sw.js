@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vinamed-cache-v4';
+const CACHE_NAME = 'vinamed-cache-v5';
 
 // Solo cachear activos estáticos que NO son los bundles de Vite
 const STATIC_ASSETS = [
